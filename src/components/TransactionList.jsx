@@ -1,6 +1,9 @@
 import { categories } from "../utils/categories";
+import { useTransactions } from "../context/TransactionsContext";
 
 export default function TransactionList({ transactions, onEdit, onDelete }) {
+  const { setSearchQuery } = useTransactions();
+
   if (!transactions.length) return <p className="text-center text-gray-500">Nessuna transazione</p>;
 
   return (
@@ -24,12 +27,8 @@ export default function TransactionList({ transactions, onEdit, onDelete }) {
               <div className={`font-bold ${isIncome ? "text-green-600" : "text-red-500"} mr-2`}>
                 {Number(t.amount).toFixed(2)}€
               </div>
-              <button onClick={() => onEdit && onEdit(t)} className="text-sm text-blue-600 hover:underline">
-                Modifica
-              </button>
-              <button onClick={() => onDelete && onDelete(t._id)} className="text-sm text-red-600 hover:underline ml-2">
-                Elimina
-              </button>
+              {onEdit && <button onClick={() => onEdit(t)} className="text-sm text-blue-600 hover:underline">Modifica</button>}
+              {onDelete && <button onClick={() => onDelete(t._id)} className="text-sm text-red-600 hover:underline ml-2">Elimina</button>}
             </div>
           </div>
         );
