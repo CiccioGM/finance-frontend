@@ -2,23 +2,21 @@ import { useEffect, useState } from "react";
 import AddTransactionForm from "./components/AddTransactionForm";
 import TransactionList from "./components/TransactionList";
 import ExpenseChart from "./components/ExpenseChart";
+import IncomeChart from "./components/IncomeChart";
+import FilterToggle from "./components/FilterToggle";
 
 const API = import.meta.env.VITE_API_URL;
 
 export default function App() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("tutte"); // 'tutte' | 'entrate' | 'uscite'
 
   const loadTransactions = async () => {
     try {
       const res = await fetch(`${API}/api/transactions`);
       const data = await res.json();
-      // assicurati che date siano oggetti Date nel client
-      const normalized = data.map((t) => ({
-        ...t,
-        date: new Date(t.date),
-      }));
-      // ordina per data discendente
+      const normalized = data.map((t) => ({ ...t, date: new Date(t.date) }));
       normalized.sort((a, b) => new Date(b.date) - new Date(a.date));
       setTransactions(normalized);
     } catch (e) {
@@ -35,19 +33,13 @@ export default function App() {
 
   const addTransaction = async (newTx) => {
     try {
-      // newTx.date è oggetto Date o iso string
-      const payload = {
-        ...newTx,
-        // backend si aspetta un date ISO string (Mongo accetta anche quello)
-        date: new Date(newTx.date).toISOString(),
-      };
+      const payload = { ...newTx, date: new Date(newTx.date).toISOString() };
       const res = await fetch(`${API}/api/transactions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      // normalizza data per client
       data.date = new Date(data.date);
       setTransactions((prev) => [data, ...prev]);
     } catch (e) {
@@ -55,7 +47,15 @@ export default function App() {
     }
   };
 
-  // calcoli dashboard
+  // Filtra le transazioni per la vista/lista
+  const filteredTransactions = transactions.filter((t) => {
+    if (filter === "tutte") return true;
+    if (filter === "entrate") return Number(t.amount) > 0;
+    if (filter === "uscite") return Number(t.amount) < 0;
+    return true;
+  });
+
+  // calcoli dashboard (su tutte le transazioni)
   const total = transactions.reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const income = transactions
     .filter((t) => Number(t.amount) > 0)
@@ -84,8 +84,22 @@ export default function App() {
       </div>
 
       <AddTransactionForm onAdd={addTransaction} />
-      <ExpenseChart transactions={transactions} />
-      {loading ? <p className="text-center text-gray-500">Caricamento...</p> : <TransactionList transactions={transactions} />}
+
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <FilterToggle value={filter} onChange={setFilter} />
+      </div>
+
+      {/* Grafici: mostriamo Entrate e Uscite separati */}
+      <div className="grid grid-cols-1 gap-4">
+        <IncomeChart transactions={transactions} />
+        <ExpenseChart transactions={transactions} />
+      </div>
+
+      {loading ? (
+        <p className="text-center text-gray-500 mt-4">Caricamento...</p>
+      ) : (
+        <TransactionList transactions={filteredTransactions} />
+      )}
     </div>
   );
 }
