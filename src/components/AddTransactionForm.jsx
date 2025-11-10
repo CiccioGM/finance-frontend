@@ -1,23 +1,40 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { categories } from "../utils/categories";
 
-export default function AddTransactionForm({ onAdd }) {
+export default function AddTransactionForm({ onAdd, initial = null, onCancel = null, submitLabel = "Aggiungi" }) {
   const [form, setForm] = useState({
     date: new Date().toISOString().substring(0, 10),
-    type: "uscita", // 'entrata' o 'uscita'
+    type: "uscita",
     description: "",
     category: "Altro",
     amount: "",
   });
 
+  useEffect(() => {
+    if (initial) {
+      // initial may have amount negative/positive; detect type
+      setForm({
+        date: new Date(initial.date).toISOString().substring(0, 10),
+        type: Number(initial.amount) >= 0 ? "entrata" : "uscita",
+        description: initial.description || "",
+        category: initial.category || "Altro",
+        amount: Math.abs(Number(initial.amount || 0)).toString(),
+      });
+    }
+  }, [initial]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.description || form.amount === "") return;
+    if (!form.description || form.amount === "") {
+      alert("Compila descrizione e importo.");
+      return;
+    }
 
-    // normalizza importo: entrata => positivo, uscita => negativo
     let amount = parseFloat(form.amount);
-    if (Number.isNaN(amount)) return;
-
+    if (Number.isNaN(amount)) {
+      alert("Importo non valido.");
+      return;
+    }
     if (form.type === "uscita" && amount > 0) amount = -Math.abs(amount);
     if (form.type === "entrata" && amount < 0) amount = Math.abs(amount);
 
@@ -26,22 +43,26 @@ export default function AddTransactionForm({ onAdd }) {
       description: form.description.trim(),
       category: form.category,
       amount,
-      // opzionali
       account: "Default",
       method: "Card",
     };
 
     onAdd(payload);
-    setForm({
-      ...form,
-      description: "",
-      amount: "",
-    });
+
+    // if adding new (no initial), reset; if editing, keep or close by parent
+    if (!initial) {
+      setForm({
+        date: new Date().toISOString().substring(0, 10),
+        type: "uscita",
+        description: "",
+        category: "Altro",
+        amount: "",
+      });
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-4 rounded-xl shadow mb-4 flex flex-col gap-3">
-      {/* 1) Data */}
       <input
         type="date"
         className="border rounded p-2"
@@ -50,42 +71,19 @@ export default function AddTransactionForm({ onAdd }) {
         required
       />
 
-      {/* 2) Tipo: Entrata / Uscita */}
       <div className="flex gap-2">
         <label className={`flex-1 p-2 text-center border rounded cursor-pointer ${form.type === "entrata" ? "bg-green-50 border-green-300" : ""}`}>
-          <input
-            type="radio"
-            name="type"
-            value="entrata"
-            checked={form.type === "entrata"}
-            onChange={() => setForm({ ...form, type: "entrata" })}
-            className="sr-only"
-          />
+          <input type="radio" name="type" value="entrata" checked={form.type === "entrata"} onChange={() => setForm({ ...form, type: "entrata" })} className="sr-only" />
           Entrata
         </label>
         <label className={`flex-1 p-2 text-center border rounded cursor-pointer ${form.type === "uscita" ? "bg-red-50 border-red-300" : ""}`}>
-          <input
-            type="radio"
-            name="type"
-            value="uscita"
-            checked={form.type === "uscita"}
-            onChange={() => setForm({ ...form, type: "uscita" })}
-            className="sr-only"
-          />
+          <input type="radio" name="type" value="uscita" checked={form.type === "uscita"} onChange={() => setForm({ ...form, type: "uscita" })} className="sr-only" />
           Uscita
         </label>
       </div>
 
-      {/* 3) Descrizione */}
-      <input
-        placeholder="Descrizione"
-        className="border rounded p-2"
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-        required
-      />
+      <input placeholder="Descrizione" className="border rounded p-2" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
 
-      {/* Categoria */}
       <select className="border rounded p-2" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
         {categories.map((c) => (
           <option key={c.name} value={c.name}>
@@ -94,18 +92,18 @@ export default function AddTransactionForm({ onAdd }) {
         ))}
       </select>
 
-      {/* Importo */}
-      <input
-        type="number"
-        step="0.01"
-        placeholder="Importo (€)"
-        className="border rounded p-2"
-        value={form.amount}
-        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-        required
-      />
+      <input type="number" step="0.01" placeholder="Importo (€)" className="border rounded p-2" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
 
-      <button className="bg-blue-500 text-white rounded p-2 font-semibold hover:bg-blue-600">Aggiungi</button>
+      <div className="flex gap-2">
+        <button type="submit" className="flex-1 bg-blue-500 text-white rounded p-2 font-semibold hover:bg-blue-600">
+          {submitLabel}
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="flex-1 border rounded p-2">
+            Annulla
+          </button>
+        )}
+      </div>
     </form>
   );
 }
