@@ -1,6 +1,6 @@
 import { categories } from "../utils/categories";
 
-export default function TransactionList({ transactions }) {
+export default function TransactionList({ transactions, onEdit, onDelete }) {
   if (!transactions.length) return <p className="text-center text-gray-500">Nessuna transazione</p>;
 
   return (
@@ -19,10 +19,17 @@ export default function TransactionList({ transactions }) {
                 </p>
               </div>
             </div>
-            <div className="text-right">
-              <div className={`font-bold ${isIncome ? "text-green-600" : "text-red-500"}`}>
+
+            <div className="flex items-center gap-3">
+              <div className={`font-bold ${isIncome ? "text-green-600" : "text-red-500"} mr-2`}>
                 {Number(t.amount).toFixed(2)}€
               </div>
+              <button onClick={() => onEdit && onEdit(t)} className="text-sm text-blue-600 hover:underline">
+                Modifica
+              </button>
+              <button onClick={() => onDelete && onDelete(t._id)} className="text-sm text-red-600 hover:underline ml-2">
+                Elimina
+              </button>
             </div>
           </div>
         );
