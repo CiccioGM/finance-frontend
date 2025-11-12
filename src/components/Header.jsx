@@ -1,11 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
 import SearchInput from "./SearchInput";
 import { useTransactions } from "../context/TransactionsContext";
-import { Menu } from "lucide-react";
+import { Menu as MenuIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Header() {
-  const { setSearchQuery } = useTransactions();
+  const { setSearchQuery, setModalOpen } = useTransactions();
   const navigate = useNavigate();
+
+  // menu custom con click fuori per chiudere
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef();
+
+  useEffect(() => {
+    const onOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
 
   return (
     <header className="bg-white shadow">
@@ -20,26 +35,26 @@ export default function Header() {
           </div>
 
           <button
-            onClick={() => navigate("/add")}
+            onClick={() => setModalOpen(true)} // <-- apre il modal
             className="bg-blue-600 text-white px-3 py-2 rounded-md shadow hover:bg-blue-700"
             title="Aggiungi transazione"
           >
             + Nuova
           </button>
 
-          {/* menu a scomparsa */}
-          <div className="relative">
-            <details className="relative">
-              <summary className="cursor-pointer p-2 rounded-md hover:bg-gray-100">
-                <Menu size={20} />
-              </summary>
+          <div ref={menuRef} className="relative">
+            <button onClick={() => setMenuOpen((s) => !s)} className="p-2 rounded-md hover:bg-gray-100">
+              <MenuIcon size={20} />
+            </button>
+
+            {menuOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow z-20">
-                <Link to="/" className="block px-4 py-2 hover:bg-gray-50">Dashboard</Link>
-                <Link to="/transactions" className="block px-4 py-2 hover:bg-gray-50">Transazioni</Link>
-                <Link to="/categories" className="block px-4 py-2 hover:bg-gray-50">Categorie</Link>
-                <Link to="/settings" className="block px-4 py-2 hover:bg-gray-50">Impostazioni</Link>
+                <Link to="/" className="block px-4 py-2 hover:bg-gray-50" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+                <Link to="/transactions" className="block px-4 py-2 hover:bg-gray-50" onClick={() => setMenuOpen(false)}>Transazioni</Link>
+                <Link to="/categories" className="block px-4 py-2 hover:bg-gray-50" onClick={() => setMenuOpen(false)}>Categorie</Link>
+                <Link to="/settings" className="block px-4 py-2 hover:bg-gray-50" onClick={() => setMenuOpen(false)}>Impostazioni</Link>
               </div>
-            </details>
+            )}
           </div>
         </div>
       </div>
