@@ -55,8 +55,8 @@ export default function MonthlyBarChart({ transactions }) {
           <BarChart
             data={data}
             margin={{ top: 10, right: 16, left: 0, bottom: 6 }}
-            barGap={8} // spazio tra le barre dello stesso gruppo
-            barCategoryGap="10%" // spazio tra le categorie (gruppi di barre)
+            barGap={2} // spazio tra le barre dello stesso gruppo
+            barCategoryGap="30%" // spazio tra le categorie (gruppi di barre)
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
