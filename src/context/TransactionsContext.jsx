@@ -11,6 +11,7 @@ export function TransactionsProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [modalOpen, setModalOpen] = useState(false); // <-- nuovo: stato modal
 
   const load = async () => {
     try {
@@ -66,6 +67,8 @@ export function TransactionsProvider({ children }) {
     deleteTransaction,
     searchQuery,
     setSearchQuery,
+    modalOpen,       // export modal state
+    setModalOpen,    // export setter
   };
 
   return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>;
