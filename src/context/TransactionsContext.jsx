@@ -11,7 +11,8 @@ export function TransactionsProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [modalOpen, setModalOpen] = useState(false); // <-- nuovo: stato modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState(null); // <-- editing transaction
 
   const load = async () => {
     try {
@@ -57,6 +58,28 @@ export function TransactionsProvider({ children }) {
   const deleteTransaction = async (id) => {
     await fetch(`${API}/api/transactions/${id}`, { method: "DELETE" });
     setTransactions((p) => p.filter((t) => t._id !== id));
+    // if we were editing that tx, close edit
+    if (editingTx && editingTx._id === id) {
+      setEditingTx(null);
+      setModalOpen(false);
+    }
+  };
+
+  // open modal in add mode
+  const openAddModal = () => {
+    setEditingTx(null);
+    setModalOpen(true);
+  };
+
+  // open modal in edit mode (provide transaction object)
+  const openEdit = (tx) => {
+    setEditingTx(tx);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setEditingTx(null);
+    setModalOpen(false);
   };
 
   const value = {
@@ -67,8 +90,13 @@ export function TransactionsProvider({ children }) {
     deleteTransaction,
     searchQuery,
     setSearchQuery,
-    modalOpen,       // export modal state
-    setModalOpen,    // export setter
+    modalOpen,
+    setModalOpen,
+    editingTx,
+    openAddModal,
+    openEdit,
+    closeModal,
+    reload: load,
   };
 
   return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>;
