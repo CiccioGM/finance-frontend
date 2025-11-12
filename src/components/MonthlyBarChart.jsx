@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -41,7 +41,33 @@ export default function MonthlyBarChart({ transactions }) {
     expense: Number(m.expense.toFixed(2)),
   }));
 
-  // se non ci sono dati, mostra comunque il contenitore con messaggio
+  // responsive barSize: più grande su schermi piccoli
+  const [barSize, setBarSize] = useState(18);
+
+  useEffect(() => {
+    function computeSize() {
+      const w = window.innerWidth;
+      // thresholds (puoi regolare i numeri)
+      if (w < 420) {
+        setBarSize(30); // smartphone piccolo -> barre più spesse
+      } else if (w < 640) {
+        setBarSize(26); // smartphone/tablet
+      } else if (w < 1024) {
+        setBarSize(20); // tablet / small desktop
+      } else {
+        setBarSize(14); // desktop
+      }
+    }
+    computeSize();
+    window.addEventListener("resize", computeSize);
+    return () => window.removeEventListener("resize", computeSize);
+  }, []);
+
+  // barGap = 0 => le due barre dello stesso mese si toccano
+  const barGap = 0;
+  // spazio tra gruppi (mesi) = metà di una barra
+  const barCategoryGap = Math.max(6, Math.round(barSize / 2));
+
   const hasData = data.some((d) => d.income > 0 || d.expense > 0);
 
   return (
@@ -55,17 +81,17 @@ export default function MonthlyBarChart({ transactions }) {
           <BarChart
             data={data}
             margin={{ top: 10, right: 16, left: 0, bottom: 6 }}
-            barGap={2} // spazio tra le barre dello stesso gruppo
-            barCategoryGap="30%" // spazio tra le categorie (gruppi di barre)
+            barGap={barGap}
+            barCategoryGap={barCategoryGap}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />
             <Tooltip formatter={(v) => `${Number(v).toFixed(2)}€`} />
             <Legend verticalAlign="top" align="right" />
-            {/* due barre senza stackId -> verranno disposte affiancate */}
-            <Bar dataKey="income" name="Entrate" fill="#00C49F" />
-            <Bar dataKey="expense" name="Uscite" fill="#FF8042" />
+            {/* Specificare barSize garantisce larghezza coerente */}
+            <Bar dataKey="income" name="Entrate" fill="#00C49F" barSize={barSize} />
+            <Bar dataKey="expense" name="Uscite" fill="#FF8042" barSize={barSize} />
           </BarChart>
         </ResponsiveContainer>
       )}
