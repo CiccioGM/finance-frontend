@@ -3,55 +3,54 @@ import AddTransactionForm from "./AddTransactionForm";
 import { useTransactions } from "../context/TransactionsContext";
 
 export default function AddTransactionModal({ initial = null, onSaved = null }) {
-  const { modalOpen, setModalOpen, addTransaction, updateTransaction } = useTransactions();
+  const { modalOpen, setModalOpen, addTransaction, updateTransaction, editingTx, closeModal } = useTransactions();
   const refPanel = useRef();
+
+  const effectiveInitial = initial || editingTx || null;
 
   // close on Escape
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape") setModalOpen(false);
+      if (e.key === "Escape") closeModal();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setModalOpen]);
+  }, [closeModal]);
 
   // click outside to close
   useEffect(() => {
     const onClick = (e) => {
       if (!modalOpen) return;
       if (refPanel.current && !refPanel.current.contains(e.target)) {
-        setModalOpen(false);
+        closeModal();
       }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [modalOpen, setModalOpen]);
+  }, [modalOpen, closeModal]);
 
   if (!modalOpen) return null;
 
   const handleAdd = async (payload) => {
-    if (initial && initial._id) {
-      await updateTransaction(initial._id, payload);
+    if (effectiveInitial && effectiveInitial._id) {
+      await updateTransaction(effectiveInitial._id, payload);
     } else {
       await addTransaction(payload);
     }
     if (onSaved) onSaved();
-    setModalOpen(false);
+    closeModal();
   };
 
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center p-4">
-      {/* backdrop semi-trasparente (vedi la dashboard sotto) */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-      {/* panel in primo piano */}
       <div ref={refPanel} className="relative w-full max-w-md bg-white rounded-xl shadow-lg p-4 z-50">
-        <h3 className="text-lg font-semibold mb-2">{initial ? "Modifica transazione" : "Nuova transazione"}</h3>
+        <h3 className="text-lg font-semibold mb-2">{effectiveInitial ? "Modifica transazione" : "Nuova transazione"}</h3>
         <AddTransactionForm
-          initial={initial}
+          initial={effectiveInitial}
           onAdd={handleAdd}
-          onCancel={() => setModalOpen(false)}
-          submitLabel={initial ? "Salva" : "Aggiungi"}
+          onCancel={() => closeModal()}
+          submitLabel={effectiveInitial ? "Salva" : "Aggiungi"}
         />
       </div>
     </div>
