@@ -4,7 +4,7 @@ import { useTransactions } from "../context/TransactionsContext";
 import { Menu as MenuIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-export default function Header() {
+export default function Header({ onEditRequested }) {
   const { setSearchQuery, setModalOpen } = useTransactions();
   const navigate = useNavigate();
 
@@ -26,7 +26,8 @@ export default function Header() {
     <header className="bg-white shadow">
       <div className="max-w-5xl mx-auto flex items-center justify-between p-3 gap-3">
         <div className="flex items-center gap-4">
-          <Link to="/" className="text-xl font-bold">Finance Tracker</Link>
+          {/* 1) nome spostato a sinistra */}
+          <Link to="/" className="text-xl font-bold">Gestione Finanze</Link>
         </div>
 
         <div className="flex items-center gap-3">
@@ -34,8 +35,12 @@ export default function Header() {
             <SearchInput onSearch={(q) => setSearchQuery(q)} />
           </div>
 
+          {/* pulsante rapido: apre modal globale */}
           <button
-            onClick={() => setModalOpen(true)} // <-- apre il modal
+            onClick={() => {
+              setModalOpen(true);
+              // se vuoi navigare sulla pagina /add invece: navigate('/add')
+            }}
             className="bg-blue-600 text-white px-3 py-2 rounded-md shadow hover:bg-blue-700"
             title="Aggiungi transazione"
           >
@@ -43,7 +48,7 @@ export default function Header() {
           </button>
 
           <div ref={menuRef} className="relative">
-            <button onClick={() => setMenuOpen((s) => !s)} className="p-2 rounded-md hover:bg-gray-100">
+            <button onClick={() => setMenuOpen((s) => !s)} className="p-2 rounded-md hover:bg-gray-100" aria-label="Apri menu">
               <MenuIcon size={20} />
             </button>
 
