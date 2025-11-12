@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { categories as defaultCats } from "../utils/categories";
-import { MoreVertical, Trash2 } from "lucide-react";
+import { MoreVertical, Trash2, Edit as EditIcon, Check } from "lucide-react";
 
 const KEY = "finance_categories_v1";
 
 export default function Categories() {
   const [cats, setCats] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem(KEY) || "null");
@@ -29,8 +30,16 @@ export default function Categories() {
         {cats.map((c, i) => (
           <CategoryRow
             key={i}
+            idx={i}
             c={c}
-            onChange={(key, val) => update(i, key, val)}
+            editing={editingIndex === i}
+            onStartEdit={() => setEditingIndex(i)}
+            onCancelEdit={() => setEditingIndex(null)}
+            onSave={(newC) => {
+              update(i, "name", newC.name);
+              update(i, "icon", newC.icon);
+              setEditingIndex(null);
+            }}
             onDelete={() => remove(i)}
           />
         ))}
@@ -43,13 +52,16 @@ export default function Categories() {
   );
 }
 
-function CategoryRow({ c, onChange, onDelete }) {
-  const [open, setOpen] = useState(false);
+function CategoryRow({ c, idx, editing, onStartEdit, onCancelEdit, onSave, onDelete }) {
+  const [local, setLocal] = useState(c);
   const ref = useRef();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => setLocal(c), [c]);
 
   useEffect(() => {
     const onOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", onOutside);
     return () => document.removeEventListener("mousedown", onOutside);
@@ -57,23 +69,71 @@ function CategoryRow({ c, onChange, onDelete }) {
 
   return (
     <div ref={ref} className="flex items-center gap-2 mb-2">
-      <input value={c.icon} onChange={(e) => onChange("icon", e.target.value)} className="w-12 p-2 border rounded" />
-      <input value={c.name} onChange={(e) => onChange("name", e.target.value)} className="flex-1 p-2 border rounded" />
+      <input
+        value={local.icon}
+        onChange={(e) => setLocal({ ...local, icon: e.target.value })}
+        className="w-12 p-2 border rounded"
+        readOnly={!editing}
+        aria-label={`Icona categoria ${local.name}`}
+      />
+      <input
+        value={local.name}
+        onChange={(e) => setLocal({ ...local, name: e.target.value })}
+        className="flex-1 p-2 border rounded"
+        readOnly={!editing}
+        aria-label={`Nome categoria ${local.name}`}
+      />
 
-      {/* menu per azioni (visibile e comodo su mobile) */}
       <div className="relative">
-        <button onClick={() => setOpen((s) => !s)} className="p-2 rounded hover:bg-gray-100" aria-label="Azioni categoria">
+        <button onClick={() => setMenuOpen((s) => !s)} className="p-2 rounded hover:bg-gray-100" aria-label="Azioni categoria">
           <MoreVertical size={18} />
         </button>
 
-        {open && (
-          <div className="absolute right-0 mt-1 w-36 bg-white border rounded shadow z-20">
-            <button onClick={() => { setOpen(false); /* eventuali azioni future */ }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-              {/* placeholder per Edit (già in-place) */} Modifica
-            </button>
-            <button onClick={() => { setOpen(false); onDelete(); }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600">
+        {menuOpen && (
+          <div className="absolute right-0 mt-1 w-40 bg-white border rounded shadow z-20">
+            {!editing ? (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  onStartEdit();
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <EditIcon size={16} /> Modifica
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSave(local);
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-green-600"
+              >
+                <Check size={16} /> Salva
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                if (confirm(`Eliminare la categoria "${c.name}"?`)) onDelete();
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
+            >
               <Trash2 size={16} /> Elimina
             </button>
+
+            {editing && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  onCancelEdit();
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-600"
+              >
+                Annulla
+              </button>
+            )}
           </div>
         )}
       </div>
