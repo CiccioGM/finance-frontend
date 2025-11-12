@@ -1,25 +1,20 @@
-import { useEffect } from "react";
+import AddTransactionForm from "../components/AddTransactionForm";
 import { useTransactions } from "../context/TransactionsContext";
-import AddTransactionModal from "../components/AddTransactionModal";
 import { useNavigate } from "react-router-dom";
 
 export default function AddTransactionPage() {
-  const { modalOpen, setModalOpen } = useTransactions();
+  const { addTransaction } = useTransactions();
   const nav = useNavigate();
 
-  useEffect(() => {
-    setModalOpen(true);
-    return () => setModalOpen(false);
-    // eslint-disable-next-line
-  }, []);
+  const handleAdd = async (payload) => {
+    await addTransaction(payload);
+    nav("/"); // torna alla dashboard
+  };
 
-  // quando chiudi modal, torna alla dashboard
-  useEffect(() => {
-    if (!modalOpen) {
-      nav("/");
-    }
-    // eslint-disable-next-line
-  }, [modalOpen]);
-
-  return <AddTransactionModal />;
+  return (
+    <div className="max-w-md mx-auto">
+      <h2 className="text-xl font-semibold mb-3">Aggiungi Transazione</h2>
+      <AddTransactionForm onAdd={handleAdd} />
+    </div>
+  );
 }
