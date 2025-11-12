@@ -1,22 +1,24 @@
 import { categories } from "../utils/categories";
 import { useState, useRef, useEffect } from "react";
 import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import { useTransactions } from "../context/TransactionsContext";
 
-export default function TransactionList({ transactions, onEdit, onDelete }) {
+export default function TransactionList({ transactions }) {
   if (!transactions.length) return <p className="text-center text-gray-500">Nessuna transazione</p>;
 
   return (
     <div className="bg-white p-4 rounded-xl shadow mt-4">
       {transactions.map((t) => (
-        <TransactionRow key={t._id || `${t.date}-${t.description}-${t.amount}`} t={t} onEdit={onEdit} onDelete={onDelete} />
+        <TransactionRow key={t._id || `${t.date}-${t.description}-${t.amount}`} t={t} />
       ))}
     </div>
   );
 }
 
-function TransactionRow({ t, onEdit, onDelete }) {
+function TransactionRow({ t }) {
   const cat = categories.find((c) => c.name === t.category) || {};
   const isIncome = Number(t.amount) > 0;
+  const { openEdit, deleteTransaction } = useTransactions();
 
   // menu state per riga
   const [open, setOpen] = useState(false);
@@ -54,7 +56,7 @@ function TransactionRow({ t, onEdit, onDelete }) {
             <button
               onClick={() => {
                 setOpen(false);
-                onEdit && onEdit(t);
+                openEdit(t); // usa context per aprire edit
               }}
               className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
             >
@@ -63,7 +65,9 @@ function TransactionRow({ t, onEdit, onDelete }) {
             <button
               onClick={() => {
                 setOpen(false);
-                onDelete && onDelete(t._id);
+                if (confirm("Sei sicuro di voler eliminare questa transazione?")) {
+                  deleteTransaction(t._id);
+                }
               }}
               className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
             >
