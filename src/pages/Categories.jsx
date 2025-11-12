@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { categories as defaultCats } from "../utils/categories";
+import { MoreVertical, Trash2 } from "lucide-react";
 
 const KEY = "finance_categories_v1";
 
@@ -26,15 +27,55 @@ export default function Categories() {
 
       <div className="bg-white p-4 rounded-xl shadow">
         {cats.map((c, i) => (
-          <div key={i} className="flex items-center gap-2 mb-2">
-            <input value={c.icon} onChange={(e) => update(i, "icon", e.target.value)} className="w-12 p-2 border rounded" />
-            <input value={c.name} onChange={(e) => update(i, "name", e.target.value)} className="flex-1 p-2 border rounded" />
-            <button onClick={() => remove(i)} className="text-red-600 ml-2">Elimina</button>
-          </div>
+          <CategoryRow
+            key={i}
+            c={c}
+            onChange={(key, val) => update(i, key, val)}
+            onDelete={() => remove(i)}
+          />
         ))}
+
         <div className="mt-2 text-right">
           <button onClick={add} className="bg-blue-600 text-white px-3 py-2 rounded">Aggiungi Categoria</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryRow({ c, onChange, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const onOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="flex items-center gap-2 mb-2">
+      <input value={c.icon} onChange={(e) => onChange("icon", e.target.value)} className="w-12 p-2 border rounded" />
+      <input value={c.name} onChange={(e) => onChange("name", e.target.value)} className="flex-1 p-2 border rounded" />
+
+      {/* menu per azioni (visibile e comodo su mobile) */}
+      <div className="relative">
+        <button onClick={() => setOpen((s) => !s)} className="p-2 rounded hover:bg-gray-100" aria-label="Azioni categoria">
+          <MoreVertical size={18} />
+        </button>
+
+        {open && (
+          <div className="absolute right-0 mt-1 w-36 bg-white border rounded shadow z-20">
+            <button onClick={() => { setOpen(false); /* eventuali azioni future */ }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
+              {/* placeholder per Edit (già in-place) */} Modifica
+            </button>
+            <button onClick={() => { setOpen(false); onDelete(); }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600">
+              <Trash2 size={16} /> Elimina
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
