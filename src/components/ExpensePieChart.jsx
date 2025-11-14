@@ -12,7 +12,7 @@ export default function ExpensePieChart({
   data,
   activeId,
   onActiveChange,
-  legendPosition = "side", // "side" | "bottom"
+  legendPosition = "side", // "side" (DESTRA) | "bottom"
 }) {
   const handleToggle = (id) => {
     if (!onActiveChange) return;
@@ -38,56 +38,14 @@ export default function ExpensePieChart({
   }
 
   if (isSide) {
-    // legenda a lato (sinistra) su tutti i dispositivi
+    // GRAFICO A SINISTRA, LEGENDA A DESTRA (default PC + smartphone)
     return (
       <div
         className="flex flex-row gap-3 items-start w-full"
         style={{ overflow: "hidden" }}
       >
-        {/* LEGENDA A SINISTRA */}
-        <div className="w-1/2 space-y-1 min-w-0">
-          {data.map((entry) => {
-            const isActive = activeId === entry._id;
-            const highlighted = isActive;
-
-            return (
-              <button
-                key={entry._id}
-                type="button"
-                onClick={() => handleToggle(entry._id)}
-                className={`w-full flex items-center justify-between px-2 py-1 rounded text-left ${
-                  highlighted ? "bg-gray-50" : ""
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-lg flex-shrink-0">
-                    {entry.icon || "💸"}
-                  </span>
-                  <span
-                    className={`text-sm truncate ${
-                      highlighted ? "font-semibold" : ""
-                    }`}
-                  >
-                    {entry.name}
-                  </span>
-                </div>
-                <div className="flex flex-col items-end text-xs flex-shrink-0">
-                  <span className="text-red-900 font-semibold">
-                    {formatEuro(entry.value)}
-                  </span>
-                  <span className="text-gray-500">
-                    {typeof entry.percentage === "number"
-                      ? `${entry.percentage.toFixed(1)}%`
-                      : ""}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* TORTA A DESTRA */}
-        <div className="w-1/2 h-56 md:h-64">
+        {/* GRAFICO A SINISTRA */}
+        <div className="w-[45%] h-56 md:h-64 flex-shrink-0">
           <ResponsiveContainer>
             <PieChart>
               <Pie
@@ -120,11 +78,53 @@ export default function ExpensePieChart({
             </PieChart>
           </ResponsiveContainer>
         </div>
+
+        {/* LEGENDA A DESTRA, ADATTABILE (TESTI TRONCATI SE LUNGHI) */}
+        <div className="w-[55%] space-y-1 min-w-0">
+          {data.map((entry) => {
+            const isActive = activeId === entry._id;
+            const highlighted = isActive;
+
+            return (
+              <button
+                key={entry._id}
+                type="button"
+                onClick={() => handleToggle(entry._id)}
+                className={`w-full flex items-center justify-between px-2 py-1 rounded text-left ${
+                  highlighted ? "bg-gray-50" : ""
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-lg flex-shrink-0">
+                    {entry.icon || "💸"}
+                  </span>
+                  <span
+                    className={`text-xs md:text-sm truncate ${
+                      highlighted ? "font-semibold" : ""
+                    }`}
+                  >
+                    {entry.name}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end text-[10px] md:text-xs flex-shrink-0">
+                  <span className="text-red-900 font-semibold">
+                    {formatEuro(entry.value)}
+                  </span>
+                  <span className="text-gray-500">
+                    {typeof entry.percentage === "number"
+                      ? `${entry.percentage.toFixed(1)}%`
+                      : ""}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  // legenda in basso
+  // LEGENDA IN BASSO
   return (
     <div
       className="flex flex-col gap-3 items-center w-full"
@@ -183,14 +183,14 @@ export default function ExpensePieChart({
                   {entry.icon || "💸"}
                 </span>
                 <span
-                  className={`text-sm truncate ${
+                  className={`text-xs md:text-sm truncate ${
                     highlighted ? "font-semibold" : ""
                   }`}
                 >
                   {entry.name}
                 </span>
               </div>
-              <div className="flex flex-col items-end text-xs flex-shrink-0">
+              <div className="flex flex-col items-end text-[10px] md:text-xs flex-shrink-0">
                 <span className="text-red-900 font-semibold">
                   {formatEuro(entry.value)}
                 </span>
