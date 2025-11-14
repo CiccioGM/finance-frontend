@@ -70,7 +70,6 @@ export default function Categories() {
                 <div style={{ fontSize: 20 }}>{c.icon}</div>
                 <div>
                   <div className="font-medium">{c.name}</div>
-                  <div className="text-xs text-gray-500">{c.type}</div>
                 </div>
               </div>
               <div
