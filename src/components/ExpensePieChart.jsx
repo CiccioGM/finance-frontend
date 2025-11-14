@@ -1,10 +1,9 @@
 // src/components/ExpensePieChart.jsx
-import React, { useState } from "react";
+import React from "react";
 import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 
@@ -15,8 +14,6 @@ function formatEuro(v) {
 }
 
 export default function ExpensePieChart({ data, activeId, onActiveChange }) {
-  const [hoverId, setHoverId] = useState(null);
-
   const handleToggle = (id) => {
     if (!onActiveChange) return;
     if (activeId === id) onActiveChange(null);
@@ -25,15 +22,10 @@ export default function ExpensePieChart({ data, activeId, onActiveChange }) {
 
   const getOpacityAndStroke = (entry) => {
     const isActive = activeId === entry._id;
-    const isHover = hoverId === entry._id;
-
     if (isActive) {
       return { opacity: 1, strokeWidth: 3 };
     }
-    if (isHover) {
-      return { opacity: 1, strokeWidth: 2 };
-    }
-    if (activeId || hoverId) {
+    if (activeId) {
       return { opacity: 0.25, strokeWidth: 1 };
     }
     return { opacity: 0.9, strokeWidth: 1 };
@@ -57,7 +49,6 @@ export default function ExpensePieChart({ data, activeId, onActiveChange }) {
                 const entry = data[index];
                 if (entry) handleToggle(entry._id);
               }}
-              onMouseLeave={() => setHoverId(null)}
             >
               {data.map((entry) => {
                 const { opacity, strokeWidth } = getOpacityAndStroke(entry);
@@ -68,22 +59,10 @@ export default function ExpensePieChart({ data, activeId, onActiveChange }) {
                     stroke="#ffffff"
                     strokeWidth={strokeWidth}
                     fillOpacity={opacity}
-                    onMouseEnter={() => setHoverId(entry._id)}
-                    onMouseLeave={() => setHoverId(null)}
                   />
                 );
               })}
             </Pie>
-            <Tooltip
-              formatter={(val, name, props) => {
-                const value = Number(val || 0);
-                const pct = props?.payload?.percentage;
-                return [
-                  `${formatEuro(value)}${typeof pct === "number" ? ` (${pct.toFixed(1)}%)` : ""}`,
-                  props?.payload?.name || "",
-                ];
-              }}
-            />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -91,16 +70,13 @@ export default function ExpensePieChart({ data, activeId, onActiveChange }) {
       <div className="w-full md:flex-1 space-y-1">
         {data.map((entry) => {
           const isActive = activeId === entry._id;
-          const isHover = hoverId === entry._id;
-          const highlighted = isActive || isHover;
+          const highlighted = isActive;
 
           return (
             <button
               key={entry._id}
               type="button"
               onClick={() => handleToggle(entry._id)}
-              onMouseEnter={() => setHoverId(entry._id)}
-              onMouseLeave={() => setHoverId(null)}
               className={`w-full flex items-center justify-between px-2 py-1 rounded text-left ${
                 highlighted ? "bg-gray-50" : ""
               }`}
