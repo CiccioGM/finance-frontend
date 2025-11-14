@@ -1,141 +1,57 @@
-import { useEffect, useState, useRef } from "react";
-import { categories as defaultCats } from "../utils/categories";
-import { MoreVertical, Trash2, Edit as EditIcon, Check } from "lucide-react";
-
-const KEY = "finance_categories_v1";
+import React, { useState } from "react";
+import { useCategories } from "../context/CategoriesContext";
 
 export default function Categories() {
-  const [cats, setCats] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null);
+  const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
+  const [editing, setEditing] = useState(null);
+  const [name, setName] = useState("");
+  const [type, setType] = useState("uscita");
+  const [icon, setIcon] = useState("💸");
+  const [color, setColor] = useState("#FF8042");
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem(KEY) || "null");
-    setCats(stored || defaultCats);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(cats));
-  }, [cats]);
-
-  const add = () => setCats((p) => [...p, { name: "Nuova", icon: "🔖" }]);
-  const update = (idx, key, val) => setCats((p) => p.map((c, i) => (i === idx ? { ...c, [key]: val } : c)));
-  const remove = (idx) => setCats((p) => p.filter((_, i) => i !== idx));
+  const onAdd = async () => {
+    if (!name) return alert("Nome richiesto");
+    await addCategory({ name, type, icon, color });
+    setName(""); setIcon("💸");
+  };
 
   return (
-    <div className="max-w-md mx-auto">
-      <h2 className="text-xl font-semibold mb-3">Categorie</h2>
-      <p className="text-sm text-gray-500 mb-2">Personalizza le categorie per Entrate e Uscite (salvate in locale).</p>
-
-      <div className="bg-white p-4 rounded-xl shadow">
-        {cats.map((c, i) => (
-          <CategoryRow
-            key={i}
-            idx={i}
-            c={c}
-            editing={editingIndex === i}
-            onStartEdit={() => setEditingIndex(i)}
-            onCancelEdit={() => setEditingIndex(null)}
-            onSave={(newC) => {
-              update(i, "name", newC.name);
-              update(i, "icon", newC.icon);
-              setEditingIndex(null);
-            }}
-            onDelete={() => remove(i)}
-          />
-        ))}
-
-        <div className="mt-2 text-right">
-          <button onClick={add} className="bg-blue-600 text-white px-3 py-2 rounded">Aggiungi Categoria</button>
+    <div className="max-w-4xl mx-auto py-6 space-y-4">
+      <div className="bg-white p-4 rounded shadow">
+        <h3 className="font-semibold mb-2">Aggiungi Categoria</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <input placeholder="Nome" value={name} onChange={e=>setName(e.target.value)} className="border p-2 rounded" />
+          <select value={type} onChange={e=>setType(e.target.value)} className="border p-2 rounded">
+            <option value="uscita">Uscita</option>
+            <option value="entrata">Entrata</option>
+          </select>
+          <input value={icon} onChange={e=>setIcon(e.target.value)} className="border p-2 rounded" />
+          <input type="color" value={color} onChange={e=>setColor(e.target.value)} className="border p-2 rounded" />
+          <div className="col-span-2 flex justify-end">
+            <button onClick={onAdd} className="px-3 py-2 bg-blue-600 text-white rounded">Aggiungi</button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function CategoryRow({ c, idx, editing, onStartEdit, onCancelEdit, onSave, onDelete }) {
-  const [local, setLocal] = useState(c);
-  const ref = useRef();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => setLocal(c), [c]);
-
-  useEffect(() => {
-    const onOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, []);
-
-  return (
-    <div ref={ref} className="flex items-center gap-2 mb-2">
-      <input
-        value={local.icon}
-        onChange={(e) => setLocal({ ...local, icon: e.target.value })}
-        className="w-12 p-2 border rounded"
-        readOnly={!editing}
-        aria-label={`Icona categoria ${local.name}`}
-      />
-      <input
-        value={local.name}
-        onChange={(e) => setLocal({ ...local, name: e.target.value })}
-        className="flex-1 p-2 border rounded"
-        readOnly={!editing}
-        aria-label={`Nome categoria ${local.name}`}
-      />
-
-      <div className="relative">
-        <button onClick={() => setMenuOpen((s) => !s)} className="p-2 rounded hover:bg-gray-100" aria-label="Azioni categoria">
-          <MoreVertical size={18} />
-        </button>
-
-        {menuOpen && (
-          <div className="absolute right-0 mt-1 w-40 bg-white border rounded shadow z-20">
-            {!editing ? (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onStartEdit();
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <EditIcon size={16} /> Modifica
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onSave(local);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-green-600"
-              >
-                <Check size={16} /> Salva
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                if (confirm(`Eliminare la categoria "${c.name}"?`)) onDelete();
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
-            >
-              <Trash2 size={16} /> Elimina
-            </button>
-
-            {editing && (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onCancelEdit();
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-600"
-              >
-                Annulla
-              </button>
-            )}
-          </div>
-        )}
+      <div className="bg-white p-4 rounded shadow">
+        <h3 className="font-semibold mb-2">Categorie</h3>
+        <div className="divide-y">
+          {categories.map(c => (
+            <div key={c._id} className="py-2 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div style={{ fontSize: 20 }}>{c.icon}</div>
+                <div>
+                  <div className="font-medium">{c.name}</div>
+                  <div className="text-xs text-gray-500">{c.type}</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>{ setEditing(c); setName(c.name); setIcon(c.icon || ""); setColor(c.color || "#fff"); setType(c.type || "uscita"); }} className="text-sm text-blue-600">Modifica</button>
+                <button onClick={async ()=>{ if(!confirm("Eliminare?")) return; try{ await deleteCategory(c._id); }catch(e){ alert("Impossibile eliminare: categoria in uso"); } }} className="text-sm text-red-600">Elimina</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
