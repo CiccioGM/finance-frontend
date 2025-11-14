@@ -21,6 +21,14 @@ export default function App() {
     const saved = window.localStorage.getItem("pieLegendPosition");
     if (saved === "bottom" || saved === "side") {
       setPieLegendPosition(saved);
+    } else {
+      // default: smartphone in basso, PC a destra
+      const width = window.innerWidth || 0;
+      if (width < 768) {
+        setPieLegendPosition("bottom");
+      } else {
+        setPieLegendPosition("side");
+      }
     }
   }, []);
 
@@ -50,10 +58,7 @@ export default function App() {
           </Routes>
         </main>
 
-        <AddTransactionModal
-          open={isAddModalOpen}
-          onClose={closeAddModal}
-        />
+        <AddTransactionModal open={isAddModalOpen} onClose={closeAddModal} />
       </div>
     </BrowserRouter>
   );
