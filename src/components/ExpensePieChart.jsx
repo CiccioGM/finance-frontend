@@ -1,5 +1,5 @@
 // src/components/ExpensePieChart.jsx
-import React from "react";
+import React, { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 function formatEuro(v) {
@@ -12,7 +12,7 @@ export default function ExpensePieChart({
   data,
   activeId,
   onActiveChange,
-  legendPosition = "side", // "side" (destra) | "bottom"
+  legendPosition = "side", // "side" = destra (desktop), "bottom" = sotto (mobile)
 }) {
   const handleToggle = (id) => {
     if (!onActiveChange || !id) return;
@@ -20,8 +20,16 @@ export default function ExpensePieChart({
     else onActiveChange(id);
   };
 
+  // 🔥 COSTRUZIONE DATI PER RECHARTS — SEMPRE CON CAMPO ID
+  const chartData = useMemo(() => {
+    return data.map((item) => ({
+      ...item,
+      id: item._id, // Recharts userà *sempre* questo
+    }));
+  }, [data]);
+
   const getOpacityAndStroke = (entry) => {
-    const isActive = activeId === entry._id;
+    const isActive = activeId === entry.id;
     if (isActive) {
       return { opacity: 1, strokeWidth: 3 };
     }
@@ -33,12 +41,12 @@ export default function ExpensePieChart({
 
   const isSide = legendPosition === "side";
 
-  if (!Array.isArray(data) || data.length === 0) {
+  if (!Array.isArray(chartData) || chartData.length === 0) {
     return <div className="text-sm text-gray-500">Nessun dato disponibile.</div>;
   }
 
   if (isSide) {
-    // Grafico a sinistra, legenda a destra
+    // LEGENDA A DESTRA (desktop)
     return (
       <div
         className="flex flex-row gap-3 items-start w-full"
@@ -49,7 +57,7 @@ export default function ExpensePieChart({
           <ResponsiveContainer>
             <PieChart>
               <Pie
-                data={data}
+                data={chartData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
@@ -57,17 +65,21 @@ export default function ExpensePieChart({
                 outerRadius={80}
                 innerRadius={40}
                 paddingAngle={2}
+                // 🔥 CLIC SU UNA FETTA FUNZIONA SEMPRE
+                onClick={(slice) => {
+                  const id = slice?.payload?.id;
+                  if (id) handleToggle(id);
+                }}
               >
-                {data.map((entry) => {
+                {chartData.map((entry) => {
                   const { opacity, strokeWidth } = getOpacityAndStroke(entry);
                   return (
                     <Cell
-                      key={entry._id}
+                      key={entry.id}
                       fill={entry.color || "#AAAAAA"}
                       stroke="#ffffff"
                       strokeWidth={strokeWidth}
                       fillOpacity={opacity}
-                      onClick={() => handleToggle(entry._id)}
                     />
                   );
                 })}
@@ -78,17 +90,16 @@ export default function ExpensePieChart({
 
         {/* LEGENDA A DESTRA */}
         <div className="w-[55%] space-y-1 min-w-0">
-          {data.map((entry) => {
-            const isActive = activeId === entry._id;
-            const highlighted = isActive;
+          {chartData.map((entry) => {
+            const isActive = activeId === entry.id;
 
             return (
               <button
-                key={entry._id}
+                key={entry.id}
                 type="button"
-                onClick={() => handleToggle(entry._id)}
+                onClick={() => handleToggle(entry.id)}
                 className={`w-full flex items-center justify-between px-2 py-1 rounded text-left ${
-                  highlighted ? "bg-gray-50" : ""
+                  isActive ? "bg-gray-50" : ""
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -97,20 +108,19 @@ export default function ExpensePieChart({
                   </span>
                   <span
                     className={`text-xs md:text-sm truncate ${
-                      highlighted ? "font-semibold" : ""
+                      isActive ? "font-semibold" : ""
                     }`}
                   >
                     {entry.name}
                   </span>
                 </div>
+
                 <div className="flex flex-col items-end text-[10px] md:text-xs flex-shrink-0">
                   <span className="text-red-900 font-semibold">
                     {formatEuro(entry.value)}
                   </span>
                   <span className="text-gray-500">
-                    {typeof entry.percentage === "number"
-                      ? `${entry.percentage.toFixed(1)}%`
-                      : ""}
+                    {entry.percentage?.toFixed(1)}%
                   </span>
                 </div>
               </button>
@@ -121,17 +131,18 @@ export default function ExpensePieChart({
     );
   }
 
-  // LEGENDA IN BASSO
+  // LEGENDA IN BASSO (mobile)
   return (
     <div
       className="flex flex-col gap-3 items-center w-full"
       style={{ overflow: "hidden" }}
     >
+      {/** GRAFICO */}
       <div className="w-full h-56 md:h-64">
         <ResponsiveContainer>
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               dataKey="value"
               nameKey="name"
               cx="50%"
@@ -139,17 +150,21 @@ export default function ExpensePieChart({
               outerRadius={80}
               innerRadius={40}
               paddingAngle={2}
+              // 🔥 CLIC SU UNA FETTA FUNZIONA SEMPRE
+              onClick={(slice) => {
+                const id = slice?.payload?.id;
+                if (id) handleToggle(id);
+              }}
             >
-              {data.map((entry) => {
+              {chartData.map((entry) => {
                 const { opacity, strokeWidth } = getOpacityAndStroke(entry);
                 return (
                   <Cell
-                    key={entry._id}
+                    key={entry.id}
                     fill={entry.color || "#AAAAAA"}
                     stroke="#ffffff"
                     strokeWidth={strokeWidth}
                     fillOpacity={opacity}
-                    onClick={() => handleToggle(entry._id)}
                   />
                 );
               })}
@@ -158,18 +173,18 @@ export default function ExpensePieChart({
         </ResponsiveContainer>
       </div>
 
+      {/** LEGENDA */}
       <div className="w-full space-y-1">
-        {data.map((entry) => {
-          const isActive = activeId === entry._id;
-          const highlighted = isActive;
+        {chartData.map((entry) => {
+          const isActive = activeId === entry.id;
 
           return (
             <button
-              key={entry._id}
+              key={entry.id}
               type="button"
-              onClick={() => handleToggle(entry._id)}
+              onClick={() => handleToggle(entry.id)}
               className={`w-full flex items-center justify-between px-2 py-1 rounded text-left ${
-                highlighted ? "bg-gray-50" : ""
+                isActive ? "bg-gray-50" : ""
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -178,20 +193,19 @@ export default function ExpensePieChart({
                 </span>
                 <span
                   className={`text-xs md:text-sm truncate ${
-                    highlighted ? "font-semibold" : ""
+                    isActive ? "font-semibold" : ""
                   }`}
                 >
                   {entry.name}
                 </span>
               </div>
+
               <div className="flex flex-col items-end text-[10px] md:text-xs flex-shrink-0">
                 <span className="text-red-900 font-semibold">
                   {formatEuro(entry.value)}
                 </span>
                 <span className="text-gray-500">
-                  {typeof entry.percentage === "number"
-                    ? `${entry.percentage.toFixed(1)}%`
-                    : ""}
+                  {entry.percentage?.toFixed(1)}%
                 </span>
               </div>
             </button>
