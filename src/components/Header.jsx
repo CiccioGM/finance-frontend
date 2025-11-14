@@ -2,11 +2,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { useTransactions } from "../context/TransactionsContext";
-import SearchInput from "./SearchInput";
 
 export default function Header({ onNewTransaction }) {
-  const { setSearchQ } = useTransactions();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const location = useLocation();
@@ -39,10 +36,6 @@ export default function Header({ onNewTransaction }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden md:block w-64">
-            <SearchInput onSearch={(q) => setSearchQ(q)} />
-          </div>
-
           <button
             type="button"
             onClick={onNewTransaction}
