@@ -1,3 +1,4 @@
+// src/components/Header.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Plus } from "lucide-react";
@@ -10,12 +11,10 @@ export default function Header({ onNewTransaction }) {
   const menuRef = useRef(null);
   const location = useLocation();
 
-  // Chiudi menù quando cambio pagina (es. dopo click su voce menu)
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Chiudi menù cliccando fuori
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -40,21 +39,19 @@ export default function Header({ onNewTransaction }) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Ricerca desktop */}
           <div className="hidden md:block w-64">
             <SearchInput onSearch={(q) => setSearchQ(q)} />
           </div>
 
-          {/* Bottone Nuova → apre modal */}
           <button
             type="button"
             onClick={onNewTransaction}
             className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md"
           >
-            <Plus size={16} /> + Nuova
+            <Plus size={16} />
+            <span>Nuova</span>
           </button>
 
-          {/* Menù hamburger */}
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -65,10 +62,7 @@ export default function Header({ onNewTransaction }) {
             </button>
             {menuOpen && (
               <div className="absolute right-0 mt-2 bg-white shadow rounded overflow-hidden z-40 min-w-[160px]">
-                <Link
-                  to="/"
-                  className="block px-4 py-2 hover:bg-gray-100"
-                >
+                <Link to="/" className="block px-4 py-2 hover:bg-gray-100">
                   Dashboard
                 </Link>
                 <Link
