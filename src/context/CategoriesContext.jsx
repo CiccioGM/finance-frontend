@@ -1,54 +1,59 @@
-import { createContext, useContext, useEffect, useState } from "react";
-
+import React, { createContext, useContext, useEffect, useState } from "react";
+const API = import.meta.env.VITE_API_URL;
 const CategoriesContext = createContext();
+export const useCategories = () => useContext(CategoriesContext);
 
 export function CategoriesProvider({ children }) {
   const [categories, setCategories] = useState([]);
-  const api = import.meta.env.VITE_API_URL;
+  const [loading, setLoading] = useState(false);
 
-  // Carica le categorie dal backend
-  useEffect(() => {
-    fetch(`${api}/api/categories`)
-      .then(res => res.json())
-      .then(setCategories)
-      .catch(console.error);
-  }, [api]);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/categories`);
+      const data = await res.json();
+      setCategories(data);
+    } catch (e) {
+      console.error("load categories", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const addCategory = async (cat) => {
-    const res = await fetch(`${api}/api/categories`, {
+  const addCategory = async (payload) => {
+    const res = await fetch(`${API}/api/categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cat),
+      body: JSON.stringify(payload),
     });
-    const newCat = await res.json();
-    setCategories(prev => [...prev, newCat]);
+    const data = await res.json();
+    setCategories(c => [data, ...c]);
+    return data;
   };
 
   const updateCategory = async (id, updates) => {
-    const res = await fetch(`${api}/api/categories/${id}`, {
+    const res = await fetch(`${API}/api/categories/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
-    const updated = await res.json();
-    setCategories(prev => prev.map(c => (c._id === id ? updated : c)));
+    const data = await res.json();
+    setCategories(c => c.map(x => x._id === id ? data : x));
+    return data;
   };
 
   const deleteCategory = async (id) => {
-    const res = await fetch(`${api}/api/categories/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error);
-      return;
-    }
-    setCategories(prev => prev.filter(c => c._id !== id));
+    const res = await fetch(`${API}/api/categories/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Delete failed");
+    setCategories(c => c.filter(x => x._id !== id));
+    return true;
   };
 
+  useEffect(() => { load(); }, []);
+
   return (
-    <CategoriesContext.Provider value={{ categories, addCategory, updateCategory, deleteCategory }}>
+    <CategoriesContext.Provider value={{ categories, loading, load, addCategory, updateCategory, deleteCategory }}>
       {children}
     </CategoriesContext.Provider>
   );
 }
-
-export const useCategories = () => useContext(CategoriesContext);
