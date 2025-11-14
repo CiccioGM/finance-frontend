@@ -1,33 +1,27 @@
+import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
-import AddTransactionPage from "./pages/AddTransactionPage";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
-import AddTransactionModal from "./components/AddTransactionModal";
-import { TransactionsProvider } from "./context/TransactionsContext";
+import AddTransactionPage from "./pages/AddTransactionPage";
 
 export default function App() {
   return (
     <BrowserRouter>
-      <TransactionsProvider>
+      <div className="min-h-screen bg-gray-50">
         <Header />
-        {/* pt-16 assicura che il contenuto parta sotto l'header (header ~64px) */}
-        <main className="pt-16 p-4 max-w-5xl mx-auto">
+        <main className="pt-16 px-4 md:px-8">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
-            <Route path="/add" element={<AddTransactionPage />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Dashboard />} />
+            <Route path="/add" element={<AddTransactionPage />} />
           </Routes>
         </main>
-
-        {/* Modal montato globalmente */}
-        <AddTransactionModal />
-      </TransactionsProvider>
+      </div>
     </BrowserRouter>
   );
 }
