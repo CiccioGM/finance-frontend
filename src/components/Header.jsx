@@ -17,7 +17,7 @@ export default function Header() {
         <div className="flex items-center gap-3">
           <div className="hidden md:block w-64"><SearchInput onSearch={q => setSearchQ(q)} /></div>
           <button onClick={() => navigate("/add")} className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md">
-            <Plus size={16} /> + Nuova
+            <Plus size={16} /> Nuova
           </button>
           <div className="relative">
             <button onClick={(e)=>{ const el = document.getElementById("main-menu"); el.classList.toggle("hidden");}} className="px-2 py-2">☰</button>
