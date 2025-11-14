@@ -110,11 +110,19 @@ export default function Dashboard() {
     };
   }, []);
 
-  const latest = Array.isArray(transactions) ? transactions.slice(0, 5) : [];
+  const latest = Array.isArray(transactions)
+    ? [...transactions]
+        .sort((a, b) => {
+          const da = a.createdAt || a.date;
+          const db = b.createdAt || b.date;
+          return new Date(db) - new Date(da);
+        })
+        .slice(0, 5)
+    : [];
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
-      {/* 3 card sempre in riga, testo con € davanti e no wrap */}
+      {/* 3 card sempre in riga */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-white p-3 md:p-4 rounded shadow">
           <div className="text-xs md:text-sm text-gray-500">Saldo</div>
