@@ -30,10 +30,17 @@ export function CategoriesProvider({ children }) {
   };
 
   const addCategory = async ({ name, icon, color }) => {
+    const payload = {
+      name,
+      icon,
+      color,
+      // per compatibilità con il backend che si aspetta "type"
+      type: "uscita",
+    };
     const res = await fetch(`${API}/api/categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, icon, color }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.error) {
@@ -45,10 +52,19 @@ export function CategoriesProvider({ children }) {
   };
 
   const updateCategory = async (id, { name, icon, color }) => {
+    const existing = (Array.isArray(categories) ? categories : []).find(
+      (c) => c._id === id
+    );
+    const payload = {
+      name,
+      icon,
+      color,
+      type: existing?.type || "uscita",
+    };
     const res = await fetch(`${API}/api/categories/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, icon, color }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.error) {
