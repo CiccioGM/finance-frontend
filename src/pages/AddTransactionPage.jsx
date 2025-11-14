@@ -1,20 +1,15 @@
+import React, { useState } from "react";
 import AddTransactionForm from "../components/AddTransactionForm";
-import { useTransactions } from "../context/TransactionsContext";
-import { useNavigate } from "react-router-dom";
 
 export default function AddTransactionPage() {
-  const { addTransaction } = useTransactions();
-  const nav = useNavigate();
-
-  const handleAdd = async (payload) => {
-    await addTransaction(payload);
-    nav("/"); // torna alla dashboard
-  };
-
+  const [done, setDone] = useState(false);
   return (
-    <div className="max-w-md mx-auto">
-      <h2 className="text-xl font-semibold mb-3">Aggiungi Transazione</h2>
-      <AddTransactionForm onAdd={handleAdd} />
+    <div className="max-w-md mx-auto py-6">
+      <div className="bg-white p-4 rounded shadow">
+        <h2 className="text-lg font-semibold mb-3">Nuova transazione</h2>
+        <AddTransactionForm onDone={()=>setDone(true)} />
+        {done && <div className="text-sm text-green-600 mt-3">Transazione salvata.</div>}
+      </div>
     </div>
   );
 }
