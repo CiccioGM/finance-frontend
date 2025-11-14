@@ -1,5 +1,10 @@
 // src/pages/Dashboard.jsx
-import React, { useMemo, useState } from "react";
+import React, {
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+} from "react";
 import { useTransactions } from "../context/TransactionsContext";
 import { useCategories } from "../context/CategoriesContext";
 import MonthlyBarChart from "../components/MonthlyBarChart";
@@ -39,10 +44,26 @@ function resolveCategory(categories, catField) {
   return null;
 }
 
-export default function Dashboard() {
+export default function Dashboard({ pieLegendPosition = "side" }) {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
   const [activeCategoryId, setActiveCategoryId] = useState(null);
+  const pieWrapperRef = useRef(null);
+
+  // click fuori dal blocco grafico → rimuove filtro
+  useEffect(() => {
+    if (!activeCategoryId) return;
+
+    function handleClick(e) {
+      if (!pieWrapperRef.current) return;
+      if (!pieWrapperRef.current.contains(e.target)) {
+        setActiveCategoryId(null);
+      }
+    }
+
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [activeCategoryId]);
 
   const filteredTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
@@ -179,12 +200,6 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [filteredTransactions]);
 
-  const activeCategoryName = useMemo(() => {
-    if (!activeCategoryId) return null;
-    const c = categories.find((cat) => cat._id === activeCategoryId);
-    return c?.name || null;
-  }, [activeCategoryId, categories]);
-
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
       <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -217,31 +232,20 @@ export default function Dashboard() {
         <MonthlyBarChart data={monthlyData} />
       </div>
 
-      <div className="bg-white p-4 rounded shadow">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Suddivisione uscite (ultimi 30gg)</h3>
-          {activeCategoryName && (
-            <button
-              type="button"
-              className="text-xs text-blue-600 underline"
-              onClick={() => setActiveCategoryId(null)}
-            >
-              Filtro: {activeCategoryName} (rimuovi)
-            </button>
-          )}
-        </div>
+      <div ref={pieWrapperRef} className="bg-white p-4 rounded shadow">
+        <h3 className="font-semibold mb-3">
+          Suddivisione uscite (ultimi 30gg)
+        </h3>
         <ExpensePieChart
           data={pieData}
           activeId={activeCategoryId}
           onActiveChange={setActiveCategoryId}
+          legendPosition={pieLegendPosition}
         />
       </div>
 
       <div className="bg-white p-4 rounded shadow">
-        <h3 className="font-semibold mb-3">
-          Ultime transazioni
-          {activeCategoryName ? ` – solo ${activeCategoryName}` : ""}
-        </h3>
+        <h3 className="font-semibold mb-3">Ultime transazioni</h3>
         <TransactionList items={latest} />
       </div>
     </div>
