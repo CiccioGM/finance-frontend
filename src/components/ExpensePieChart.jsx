@@ -57,12 +57,6 @@ export default function ExpensePieChart({
                 outerRadius={80}
                 innerRadius={40}
                 paddingAngle={2}
-                onClick={(_, index) => {
-                  const entry = data[index];
-                  if (entry && entry._id) {
-                    handleToggle(entry._id);
-                  }
-                }}
               >
                 {data.map((entry) => {
                   const { opacity, strokeWidth } = getOpacityAndStroke(entry);
@@ -73,6 +67,7 @@ export default function ExpensePieChart({
                       stroke="#ffffff"
                       strokeWidth={strokeWidth}
                       fillOpacity={opacity}
+                      onClick={() => handleToggle(entry._id)}
                     />
                   );
                 })}
@@ -144,12 +139,6 @@ export default function ExpensePieChart({
               outerRadius={80}
               innerRadius={40}
               paddingAngle={2}
-              onClick={(_, index) => {
-                const entry = data[index];
-                if (entry && entry._id) {
-                  handleToggle(entry._id);
-                }
-              }}
             >
               {data.map((entry) => {
                 const { opacity, strokeWidth } = getOpacityAndStroke(entry);
@@ -160,6 +149,7 @@ export default function ExpensePieChart({
                     stroke="#ffffff"
                     strokeWidth={strokeWidth}
                     fillOpacity={opacity}
+                    onClick={() => handleToggle(entry._id)}
                   />
                 );
               })}
