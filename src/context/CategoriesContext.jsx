@@ -1,4 +1,6 @@
+// src/context/CategoriesContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
+
 const API = import.meta.env.VITE_API_URL;
 const CategoriesContext = createContext();
 export const useCategories = () => useContext(CategoriesContext);
@@ -12,47 +14,74 @@ export function CategoriesProvider({ children }) {
     try {
       const res = await fetch(`${API}/api/categories`);
       const data = await res.json();
-      setCategories(data);
+      if (Array.isArray(data)) {
+        setCategories(data);
+      } else if (Array.isArray(data.data)) {
+        setCategories(data.data);
+      } else {
+        setCategories([]);
+      }
     } catch (e) {
       console.error("load categories", e);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const addCategory = async (payload) => {
+  const addCategory = async ({ name, icon, color }) => {
     const res = await fetch(`${API}/api/categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ name, icon, color }),
     });
     const data = await res.json();
-    setCategories(c => [data, ...c]);
+    if (data.error) {
+      console.error("addCategory error:", data.error);
+      throw new Error(data.error);
+    }
+    setCategories((c) => [data, ...(Array.isArray(c) ? c : [])]);
     return data;
   };
 
-  const updateCategory = async (id, updates) => {
+  const updateCategory = async (id, { name, icon, color }) => {
     const res = await fetch(`${API}/api/categories/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ name, icon, color }),
     });
     const data = await res.json();
-    setCategories(c => c.map(x => x._id === id ? data : x));
+    if (data.error) {
+      console.error("updateCategory error:", data.error);
+      throw new Error(data.error);
+    }
+    setCategories((c) =>
+      (Array.isArray(c) ? c : []).map((x) => (x._id === id ? data : x))
+    );
     return data;
   };
 
   const deleteCategory = async (id) => {
-    const res = await fetch(`${API}/api/categories/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Delete failed");
-    setCategories(c => c.filter(x => x._id !== id));
+    const res = await fetch(`${API}/api/categories/${id}`, {
+      method: "DELETE",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      console.error("deleteCategory error:", data.error || res.statusText);
+      throw new Error(data.error || "Delete failed");
+    }
+    setCategories((c) => (Array.isArray(c) ? c : []).filter((x) => x._id !== id));
     return true;
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   return (
-    <CategoriesContext.Provider value={{ categories, loading, load, addCategory, updateCategory, deleteCategory }}>
+    <CategoriesContext.Provider
+      value={{ categories, loading, load, addCategory, updateCategory, deleteCategory }}
+    >
       {children}
     </CategoriesContext.Provider>
   );
