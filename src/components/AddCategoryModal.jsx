@@ -5,7 +5,7 @@ import AddCategoryForm from "./AddCategoryForm";
 export default function AddCategoryModal({ open, onClose, initial }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
