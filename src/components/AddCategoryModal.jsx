@@ -1,11 +1,12 @@
 // src/components/AddCategoryModal.jsx
 import React from "react";
+import { createPortal } from "react-dom";
 import AddCategoryForm from "./AddCategoryForm";
 
 export default function AddCategoryModal({ open, onClose, initial }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
       onClick={onClose}
@@ -23,6 +24,7 @@ export default function AddCategoryModal({ open, onClose, initial }) {
         </button>
         <AddCategoryForm onDone={onClose} initial={initial} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
