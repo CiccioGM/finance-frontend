@@ -1,5 +1,5 @@
 // src/components/AddCategoryForm.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useCategories } from "../context/CategoriesContext";
 
 const ICON_OPTIONS = [
@@ -50,7 +50,6 @@ const ICON_OPTIONS = [
   "🧴",
   "💡",
   "🪵",
-  "🧊",
   "📈",
 ];
 
@@ -67,7 +66,6 @@ const COLOR_OPTIONS = [
   "#F43F5E",
   "#6B7280",
   "#4B5563",
-  "#111827",
   "#A855F7",
   "#0D9488",
   "#84CC16",
@@ -75,50 +73,100 @@ const COLOR_OPTIONS = [
   "#15803D",
   "#1D4ED8",
   "#7C2D12",
+  "#FB7185",
 ];
 
 export default function AddCategoryForm({ initial, onDone }) {
-  const { addCategory, updateCategory } = useCategories();
+  const { addCategory, updateCategory, categories } = useCategories();
+
   const [name, setName] = useState(initial?.name || "");
   const [icon, setIcon] = useState(initial?.icon || "💸");
-  const [color, setColor] = useState(initial?.color || "#FF8042");
+  const [color, setColor] = useState(initial?.color || COLOR_OPTIONS[0]);
   const [loading, setLoading] = useState(false);
+
   const [isDesktop, setIsDesktop] = useState(false);
-  const [customIcon, setCustomIcon] = useState(initial?.icon || "");
+  const [showAllIcons, setShowAllIcons] = useState(false);
+  const [showAllColors, setShowAllColors] = useState(false);
 
   useEffect(() => {
     function updateSize() {
-      setIsDesktop(window.innerWidth >= 1024);
+      if (typeof window !== "undefined") {
+        setIsDesktop(window.innerWidth >= 1024);
+      }
     }
     updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updateSize);
+      return () => window.removeEventListener("resize", updateSize);
+    }
   }, []);
 
   useEffect(() => {
     if (initial) {
       setName(initial.name || "");
       setIcon(initial.icon || "💸");
-      setColor(initial.color || "#FF8042");
-      setCustomIcon(initial.icon || "");
+      setColor(initial.color || COLOR_OPTIONS[0]);
     }
   }, [initial]);
 
-  useEffect(() => {
-    // se sono su mobile/tablet e l'utente scrive una icona a mano
-    if (!isDesktop && customIcon) {
-      setIcon(customIcon);
+  const usedIcons = useMemo(() => {
+    if (!Array.isArray(categories)) return new Set();
+    const set = new Set();
+    for (const c of categories) {
+      if (!c) continue;
+      if (initial && c._id === initial._id) continue;
+      if (c.icon) set.add(c.icon);
     }
-  }, [customIcon, isDesktop]);
+    return set;
+  }, [categories, initial?._id]);
+
+  const usedColors = useMemo(() => {
+    if (!Array.isArray(categories)) return new Set();
+    const set = new Set();
+    for (const c of categories) {
+      if (!c) continue;
+      if (initial && c._id === initial._id) continue;
+      if (c.color) set.add(c.color);
+    }
+    return set;
+  }, [categories, initial?._id]);
+
+  const sortedIcons = useMemo(() => {
+    const currentIcon = initial?.icon;
+    const unused = ICON_OPTIONS.filter(
+      (ico) => !usedIcons.has(ico) || ico === currentIcon
+    );
+    const used = ICON_OPTIONS.filter(
+      (ico) => usedIcons.has(ico) && ico !== currentIcon
+    );
+    return [...unused, ...used];
+  }, [usedIcons, initial?.icon]);
+
+  const sortedColors = useMemo(() => {
+    const currentColor = initial?.color;
+    const unused = COLOR_OPTIONS.filter(
+      (c) => !usedColors.has(c) || c === currentColor
+    );
+    const used = COLOR_OPTIONS.filter(
+      (c) => usedColors.has(c) && c !== currentColor
+    );
+    return [...unused, ...used];
+  }, [usedColors, initial?.color]);
+
+  const iconsToShow = useMemo(
+    () => (showAllIcons ? sortedIcons : sortedIcons.slice(0, 20)),
+    [sortedIcons, showAllIcons]
+  );
+
+  const colorsToShow = useMemo(
+    () => (showAllColors ? sortedColors : sortedColors.slice(0, 8)),
+    [sortedColors, showAllColors]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
       alert("Il nome è obbligatorio");
-      return;
-    }
-    if (!icon) {
-      alert("Scegli un'icona");
       return;
     }
     if (!color) {
@@ -157,49 +205,83 @@ export default function AddCategoryForm({ initial, onDone }) {
         />
       </div>
 
-      {/* ICONE */}
-      <div>
-        <label className="block text-sm mb-1">Icona</label>
-        {isDesktop ? (
+      {isDesktop && (
+        <div>
+          <label className="block text-sm mb-1">Icona</label>
           <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto border rounded p-2">
-            {ICON_OPTIONS.map((ico) => (
-              <button
-                key={ico}
-                type="button"
-                onClick={() => setIcon(ico)}
-                className={`flex items-center justify-center h-8 w-8 rounded text-xl ${
-                  icon === ico ? "bg-blue-100 ring-2 ring-blue-500" : ""
-                }`}
-              >
-                {ico}
-              </button>
-            ))}
+            {iconsToShow.map((ico) => {
+              const isCurrent = icon === ico;
+              const isUsed =
+                usedIcons.has(ico) && !(initial && initial.icon === ico);
+              const disabled = isUsed && !isCurrent;
+              return (
+                <button
+                  key={ico}
+                  type="button"
+                  onClick={() => {
+                    if (disabled) return;
+                    setIcon(ico);
+                  }}
+                  className={`flex items-center justify-center h-8 w-8 rounded text-xl ${
+                    isCurrent ? "bg-blue-100 ring-2 ring-blue-500" : ""
+                  } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                  disabled={disabled}
+                  title={ico}
+                >
+                  {ico}
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          <input
-            className="w-full border rounded px-2 py-1"
-            value={customIcon}
-            onChange={(e) => setCustomIcon(e.target.value)}
-            placeholder="Inserisci emoji (es. 💸)"
-          />
-        )}
-      </div>
+          <div className="flex justify-end mt-1">
+            {!showAllIcons && sortedIcons.length > 20 && (
+              <button
+                type="button"
+                className="text-xs text-blue-600 underline"
+                onClick={() => setShowAllIcons(true)}
+              >
+                Altro
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* COLORI */}
       <div>
         <label className="block text-sm mb-1">Colore</label>
         <div className="grid grid-cols-5 gap-2">
-          {COLOR_OPTIONS.map((c) => (
+          {colorsToShow.map((c) => {
+            const isCurrent = color === c;
+            const isUsed =
+              usedColors.has(c) && !(initial && initial.color === c);
+            const disabled = isUsed && !isCurrent;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  if (disabled) return;
+                  setColor(c);
+                }}
+                className={`h-8 w-full rounded border ${
+                  isCurrent ? "ring-2 ring-offset-1 ring-blue-500" : ""
+                } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                style={{ backgroundColor: c }}
+                disabled={disabled}
+              />
+            );
+          })}
+        </div>
+        <div className="flex justify-end mt-1">
+          {!showAllColors && sortedColors.length > 8 && (
             <button
-              key={c}
               type="button"
-              onClick={() => setColor(c)}
-              className={`h-8 w-full rounded border ${
-                color === c ? "ring-2 ring-offset-1 ring-blue-500" : ""
-              }`}
-              style={{ backgroundColor: c }}
-            />
-          ))}
+              className="text-xs text-blue-600 underline"
+              onClick={() => setShowAllColors(true)}
+            >
+              Altro
+            </button>
+          )}
         </div>
       </div>
 
