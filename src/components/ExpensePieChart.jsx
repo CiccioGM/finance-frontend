@@ -38,7 +38,7 @@ export default function ExpensePieChart({
   }
 
   if (isSide) {
-    // Grafico a sinistra, legenda a destra (default desktop)
+    // Grafico a sinistra, legenda a destra
     return (
       <div
         className="flex flex-row gap-3 items-start w-full"
@@ -57,10 +57,11 @@ export default function ExpensePieChart({
                 outerRadius={80}
                 innerRadius={40}
                 paddingAngle={2}
-                onClick={(slice) => {
-                  const id =
-                    slice?.payload?._id || slice?.payload?.id || slice?.payload?.key;
-                  handleToggle(id);
+                onClick={(_, index) => {
+                  const entry = data[index];
+                  if (entry && entry._id) {
+                    handleToggle(entry._id);
+                  }
                 }}
               >
                 {data.map((entry) => {
@@ -125,7 +126,7 @@ export default function ExpensePieChart({
     );
   }
 
-  // LEGENDA IN BASSO (default mobile)
+  // LEGENDA IN BASSO
   return (
     <div
       className="flex flex-col gap-3 items-center w-full"
@@ -143,10 +144,11 @@ export default function ExpensePieChart({
               outerRadius={80}
               innerRadius={40}
               paddingAngle={2}
-              onClick={(slice) => {
-                const id =
-                  slice?.payload?._id || slice?.payload?.id || slice?.payload?.key;
-                handleToggle(id);
+              onClick={(_, index) => {
+                const entry = data[index];
+                if (entry && entry._id) {
+                  handleToggle(entry._id);
+                }
               }}
             >
               {data.map((entry) => {
