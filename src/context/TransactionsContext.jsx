@@ -3,16 +3,18 @@ const API = import.meta.env.VITE_API_URL;
 const TransactionsContext = createContext();
 export const useTransactions = () => useContext(TransactionsContext);
 
-function ensureArray(x) {
-  if (!x) return [];
-  if (Array.isArray(x)) return x;
-  // se è un oggetto con chiave "data" o "transactions", proviamo a estrarre
-  if (typeof x === "object") {
-    if (Array.isArray(x.data)) return x.data;
-    if (Array.isArray(x.transactions)) return x.transactions;
+function ensureArrayResponse(data) {
+  // Se il backend ha restituito un errore, non usiamo i dati
+  if (!data || typeof data !== "object") return [];
+  if ("error" in data) {
+    console.error("API /transactions returned error:", data.error);
+    return [];
   }
-  // fallback: proviamo a trasformare in array singolo
-  return [x];
+  if (Array.isArray(data)) return data;
+  // se per caso la risposta è { data: [...] }
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.transactions)) return data.transactions;
+  return [];
 }
 
 export function TransactionsProvider({ children }) {
@@ -25,11 +27,10 @@ export function TransactionsProvider({ children }) {
     setLoading(true);
     try {
       let url = `${API}/api/transactions`;
-      // supporto opzionale di limit/periodo
       if (opts.limit) url += `?limit=${opts.limit}`;
       const res = await fetch(url);
-      const data = await res.json();
-      const arr = ensureArray(data);
+      const json = await res.json();
+      const arr = ensureArrayResponse(json);
       setTransactions(arr);
       return arr;
     } catch (e) {
@@ -42,62 +43,48 @@ export function TransactionsProvider({ children }) {
   };
 
   const addTransaction = async (payload) => {
-    try {
-      const res = await fetch(`${API}/api/transactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      setTransactions(prev => {
-        const p = ensureArray(prev);
-        // se il server ritorna l'oggetto creato: prependarlo
-        return [data, ...p];
-      });
-      return data;
-    } catch (e) {
-      console.error("addTransaction error:", e);
-      throw e;
+    const res = await fetch(`${API}/api/transactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (json.error) {
+      console.error("addTransaction API error:", json.error);
+      throw new Error(json.error);
     }
+    setTransactions(prev => [json, ...(Array.isArray(prev) ? prev : [])]);
+    return json;
   };
 
   const updateTransaction = async (id, updates) => {
-    try {
-      const res = await fetch(`${API}/api/transactions/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-      const data = await res.json();
-      setTransactions(prev => {
-        const p = ensureArray(prev);
-        return p.map(x => (x && x._id === id ? data : x));
-      });
-      return data;
-    } catch (e) {
-      console.error("updateTransaction error:", e);
-      throw e;
+    const res = await fetch(`${API}/api/transactions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    const json = await res.json();
+    if (json.error) {
+      console.error("updateTransaction API error:", json.error);
+      throw new Error(json.error);
     }
+    setTransactions(prev => (Array.isArray(prev) ? prev : []).map(t => t._id === id ? json : t));
+    return json;
   };
 
   const deleteTransaction = async (id) => {
-    try {
-      const res = await fetch(`${API}/api/transactions/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Delete failed: ${txt}`);
-      }
-      setTransactions(prev => {
-        const p = ensureArray(prev);
-        return p.filter(x => x && x._id !== id);
-      });
-    } catch (e) {
-      console.error("deleteTransaction error:", e);
-      throw e;
+    const res = await fetch(`${API}/api/transactions/${id}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error("deleteTransaction API error:", json.error || res.statusText);
+      throw new Error(json.error || "Delete failed");
     }
+    setTransactions(prev => (Array.isArray(prev) ? prev : []).filter(t => t._id !== id));
   };
 
-  useEffect(() => { load({ limit: 1000 }); }, []);
+  useEffect(() => {
+    load({ limit: 1000 });
+  }, []);
 
   return (
     <TransactionsContext.Provider value={{
