@@ -1,81 +1,33 @@
-import { categories } from "../utils/categories";
-import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import React, { useState } from "react";
 import { useTransactions } from "../context/TransactionsContext";
+import AddTransactionModal from "./AddTransactionModal";
 
-export default function TransactionList({ transactions }) {
-  if (!transactions.length) return <p className="text-center text-gray-500">Nessuna transazione</p>;
-
-  return (
-    <div className="bg-white p-4 rounded-xl shadow mt-4">
-      {transactions.map((t) => (
-        <TransactionRow key={t._id || `${t.date}-${t.description}-${t.amount}`} t={t} />
-      ))}
-    </div>
-  );
-}
-
-function TransactionRow({ t }) {
-  const cat = categories.find((c) => c.name === t.category) || {};
-  const isIncome = Number(t.amount) > 0;
-  const { openEdit, deleteTransaction } = useTransactions();
-
-  // menu state per riga
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    const onOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, []);
+export default function TransactionList({ items }) {
+  const { deleteTransaction } = useTransactions();
+  const [editing, setEditing] = useState(null);
 
   return (
-    <div className="flex justify-between border-b py-3 items-center">
-      <div className="flex items-center gap-3">
-        <div className="text-xl">{cat.icon || "💸"}</div>
-        <div>
-          <p className="font-semibold">{t.description}</p>
-          <p className="text-sm text-gray-500">
-            {new Date(t.date).toLocaleDateString()} • {isIncome ? "Entrata" : "Uscita"} • {t.category}
-          </p>
-        </div>
-      </div>
+    <div>
+      <ul className="divide-y">
+        {items.map(tx => (
+          <li key={tx._id} className="py-3 flex justify-between items-center">
+            <div>
+              <div className="text-sm text-gray-600">{(new Date(tx.date)).toLocaleDateString()}</div>
+              <div className="font-medium">{tx.description}</div>
+              <div className="text-xs text-gray-500">{tx.category? (tx.category.name) : "—"}</div>
+            </div>
+            <div className="text-right flex flex-col items-end gap-2">
+              <div className={`${tx.amount >= 0 ? "text-green-600" : "text-red-600"} font-semibold`}>{(tx.amount).toFixed(2)} €</div>
+              <div className="flex gap-2">
+                <button onClick={()=>setEditing(tx)} className="text-sm text-blue-600">Modifica</button>
+                <button onClick={()=>{ if(confirm("Elimina?")) deleteTransaction(tx._id); }} className="text-sm text-red-600">Elimina</button>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
 
-      <div className="flex items-center gap-2 relative" ref={ref}>
-        <div className={`font-bold ${isIncome ? "text-green-600" : "text-red-500"} mr-2`}>{Number(t.amount).toFixed(2)}€</div>
-
-        {/* menu button (più compatto e touch-friendly) */}
-        <button onClick={() => setOpen((s) => !s)} className="p-2 rounded hover:bg-gray-100" aria-label="Azioni">
-          <MoreVertical size={18} />
-        </button>
-
-        {open && (
-          <div className="absolute right-0 top-full mt-1 w-40 bg-white border rounded shadow z-30">
-            <button
-              onClick={() => {
-                setOpen(false);
-                openEdit(t); // usa context per aprire edit
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Edit size={16} /> Modifica
-            </button>
-            <button
-              onClick={() => {
-                setOpen(false);
-                if (confirm("Sei sicuro di voler eliminare questa transazione?")) {
-                  deleteTransaction(t._id);
-                }
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
-            >
-              <Trash2 size={16} /> Elimina
-            </button>
-          </div>
-        )}
-      </div>
+      <AddTransactionModal open={!!editing} initial={editing} onClose={()=>setEditing(null)} />
     </div>
   );
 }
