@@ -12,10 +12,10 @@ export default function ExpensePieChart({
   data,
   activeId,
   onActiveChange,
-  legendPosition = "side", // "side" (DESTRA) | "bottom"
+  legendPosition = "side", // "side" (destra) | "bottom"
 }) {
   const handleToggle = (id) => {
-    if (!onActiveChange) return;
+    if (!onActiveChange || !id) return;
     if (activeId === id) onActiveChange(null);
     else onActiveChange(id);
   };
@@ -38,7 +38,7 @@ export default function ExpensePieChart({
   }
 
   if (isSide) {
-    // GRAFICO A SINISTRA, LEGENDA A DESTRA (default PC + smartphone)
+    // Grafico a sinistra, legenda a destra (default desktop)
     return (
       <div
         className="flex flex-row gap-3 items-start w-full"
@@ -57,9 +57,10 @@ export default function ExpensePieChart({
                 outerRadius={80}
                 innerRadius={40}
                 paddingAngle={2}
-                onClick={(_, index) => {
-                  const entry = data[index];
-                  if (entry) handleToggle(entry._id);
+                onClick={(slice) => {
+                  const id =
+                    slice?.payload?._id || slice?.payload?.id || slice?.payload?.key;
+                  handleToggle(id);
                 }}
               >
                 {data.map((entry) => {
@@ -79,7 +80,7 @@ export default function ExpensePieChart({
           </ResponsiveContainer>
         </div>
 
-        {/* LEGENDA A DESTRA, ADATTABILE (TESTI TRONCATI SE LUNGHI) */}
+        {/* LEGENDA A DESTRA */}
         <div className="w-[55%] space-y-1 min-w-0">
           {data.map((entry) => {
             const isActive = activeId === entry._id;
@@ -124,7 +125,7 @@ export default function ExpensePieChart({
     );
   }
 
-  // LEGENDA IN BASSO
+  // LEGENDA IN BASSO (default mobile)
   return (
     <div
       className="flex flex-col gap-3 items-center w-full"
@@ -142,9 +143,10 @@ export default function ExpensePieChart({
               outerRadius={80}
               innerRadius={40}
               paddingAngle={2}
-              onClick={(_, index) => {
-                const entry = data[index];
-                if (entry) handleToggle(entry._id);
+              onClick={(slice) => {
+                const id =
+                  slice?.payload?._id || slice?.payload?.id || slice?.payload?.key;
+                handleToggle(id);
               }}
             >
               {data.map((entry) => {
