@@ -12,26 +12,32 @@ export default function ExpensePieChart({
   data,
   activeId,
   onActiveChange,
-  legendPosition = "side", // "side" = destra | "bottom" = sotto
+  legendPosition = "side", // "side" = legenda a destra, "bottom" = sotto
 }) {
   const handleToggle = (id) => {
-    if (!id || !onActiveChange) return;
+    if (!onActiveChange || !id) return;
     if (activeId === id) onActiveChange(null);
     else onActiveChange(id);
   };
 
-  // 👇 Recharts avrà sempre l'ID corretto
-  const chartData = useMemo(() => {
-    return data.map((item) => ({
-      ...item,
-      id: item._id,
-    }));
-  }, [data]);
+  // Costruiamo i dati per il grafico con un campo "id" sicuro
+  const chartData = useMemo(
+    () =>
+      (Array.isArray(data) ? data : []).map((item) => ({
+        ...item,
+        id: item._id || item.id, // fallback se arriva già "id"
+      })),
+    [data]
+  );
 
   const getOpacityAndStroke = (entry) => {
     const isActive = activeId === entry.id;
-    if (isActive) return { opacity: 1, strokeWidth: 3 };
-    if (activeId) return { opacity: 0.25, strokeWidth: 1 };
+    if (isActive) {
+      return { opacity: 1, strokeWidth: 3 };
+    }
+    if (activeId) {
+      return { opacity: 0.25, strokeWidth: 1 };
+    }
     return { opacity: 0.9, strokeWidth: 1 };
   };
 
@@ -41,6 +47,7 @@ export default function ExpensePieChart({
     return <div className="text-sm text-gray-500">Nessun dato disponibile.</div>;
   }
 
+  // BLOCCO GRAFICO (uguale per entrambe le varianti)
   const PieBlock = (
     <ResponsiveContainer>
       <PieChart>
@@ -53,11 +60,6 @@ export default function ExpensePieChart({
           outerRadius={80}
           innerRadius={40}
           paddingAngle={2}
-          // 👇 QUESTA È LA FIRMA CORRETTA
-          onClick={(entry, index) => {
-            const id = entry?.payload?.id;
-            if (id) handleToggle(id);
-          }}
         >
           {chartData.map((entry) => {
             const { opacity, strokeWidth } = getOpacityAndStroke(entry);
@@ -68,6 +70,8 @@ export default function ExpensePieChart({
                 stroke="#ffffff"
                 strokeWidth={strokeWidth}
                 fillOpacity={opacity}
+                // 👇 QUI: click sulla fetta → stesso comportamento della legenda
+                onClick={() => handleToggle(entry.id)}
               />
             );
           })}
@@ -76,6 +80,7 @@ export default function ExpensePieChart({
     </ResponsiveContainer>
   );
 
+  // BLOCCO LEGENDA
   const LegendBlock = (
     <div className="w-full space-y-1">
       {chartData.map((entry) => {
@@ -102,7 +107,9 @@ export default function ExpensePieChart({
                 {formatEuro(entry.value)}
               </span>
               <span className="text-gray-500">
-                {entry.percentage?.toFixed(1)}%
+                {typeof entry.percentage === "number"
+                  ? `${entry.percentage.toFixed(1)}%`
+                  : ""}
               </span>
             </div>
           </button>
@@ -111,7 +118,7 @@ export default function ExpensePieChart({
     </div>
   );
 
-  // 📌 DESKTOP → legenda a destra
+  // DESKTOP: legenda a destra
   if (isSide) {
     return (
       <div className="flex flex-row gap-3 w-full">
@@ -121,10 +128,10 @@ export default function ExpensePieChart({
     );
   }
 
-  // 📌 MOBILE → legenda sotto
+  // MOBILE: legenda sotto
   return (
     <div className="flex flex-col gap-3 w-full">
-      <div className="h-56 md:h-64 w-full">{PieBlock}</div>
+      <div className="w-full h-56 md:h-64">{PieBlock}</div>
       <div className="w-full">{LegendBlock}</div>
     </div>
   );
