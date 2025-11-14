@@ -1,103 +1,65 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-
 const API = import.meta.env.VITE_API_URL;
 const TransactionsContext = createContext();
-
-export function useTransactions() {
-  return useContext(TransactionsContext);
-}
+export const useTransactions = () => useContext(TransactionsContext);
 
 export function TransactionsProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingTx, setEditingTx] = useState(null); // <-- editing transaction
+  const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQ, setSearchQ] = useState("");
 
-  const load = async () => {
+  const load = async (opts = {}) => {
+    setLoading(true);
     try {
-      const res = await fetch(`${API}/api/transactions`);
+      let url = `${API}/api/transactions?limit=1000`;
+      const res = await fetch(url);
       const data = await res.json();
-      const normalized = data.map((t) => ({ ...t, date: new Date(t.date) }));
-      normalized.sort((a, b) => new Date(b.date) - new Date(a.date));
-      setTransactions(normalized);
+      setTransactions(data);
     } catch (e) {
-      console.error("Errore caricamento transazioni", e);
+      console.error("load tx", e);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line
-  }, []);
-
   const addTransaction = async (payload) => {
     const res = await fetch(`${API}/api/transactions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, date: new Date(payload.date).toISOString() }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
-    data.date = new Date(data.date);
-    setTransactions((p) => [data, ...p]);
+    setTransactions(t => [data, ...t]);
+    return data;
   };
 
-  const updateTransaction = async (id, payload) => {
+  const updateTransaction = async (id, updates) => {
     const res = await fetch(`${API}/api/transactions/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, date: new Date(payload.date).toISOString() }),
+      body: JSON.stringify(updates),
     });
     const data = await res.json();
-    data.date = new Date(data.date);
-    setTransactions((p) => p.map((t) => (t._id === id ? data : t)));
+    setTransactions(t => t.map(x => x._id === id ? data : x));
+    return data;
   };
 
   const deleteTransaction = async (id) => {
-    await fetch(`${API}/api/transactions/${id}`, { method: "DELETE" });
-    setTransactions((p) => p.filter((t) => t._id !== id));
-    // if we were editing that tx, close edit
-    if (editingTx && editingTx._id === id) {
-      setEditingTx(null);
-      setModalOpen(false);
-    }
+    const res = await fetch(`${API}/api/transactions/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Delete failed");
+    setTransactions(t => t.filter(x => x._id !== id));
   };
 
-  // open modal in add mode
-  const openAddModal = () => {
-    setEditingTx(null);
-    setModalOpen(true);
-  };
+  useEffect(() => { load(); }, []);
 
-  // open modal in edit mode (provide transaction object)
-  const openEdit = (tx) => {
-    setEditingTx(tx);
-    setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setEditingTx(null);
-    setModalOpen(false);
-  };
-
-  const value = {
-    transactions,
-    loading,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    searchQuery,
-    setSearchQuery,
-    modalOpen,
-    setModalOpen,
-    editingTx,
-    openAddModal,
-    openEdit,
-    closeModal,
-    reload: load,
-  };
-
-  return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>;
+  return (
+    <TransactionsContext.Provider value={{
+      transactions, loading, load,
+      addTransaction, updateTransaction, deleteTransaction,
+      selectedCategory, setSelectedCategory, searchQ, setSearchQ
+    }}>
+      {children}
+    </TransactionsContext.Provider>
+  );
 }
