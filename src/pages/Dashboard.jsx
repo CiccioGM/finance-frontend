@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useTransactions } from "../context/TransactionsContext";
 import { useCategories } from "../context/CategoriesContext";
 import MonthlyBarChart from "../components/MonthlyBarChart";
@@ -26,15 +26,8 @@ function formatEuro(v) {
 }
 
 export default function Dashboard() {
-  const txContext = useTransactions();
-  const catContext = useCategories();
-  const transactions = Array.isArray(txContext?.transactions)
-    ? txContext.transactions
-    : [];
-  const loading = !!txContext?.loading;
-  const categories = Array.isArray(catContext?.categories)
-    ? catContext.categories
-    : [];
+  const { transactions, loading } = useTransactions();
+  const { categories } = useCategories();
 
   const [summary, setSummary] = useState({
     saldo: 0,
@@ -42,8 +35,6 @@ export default function Dashboard() {
     uscite30: 0,
   });
   const [monthly, setMonthly] = useState([]);
-  const [pie, setPie] = useState({ total: 0, data: [] });
-  const [filterCategory, setFilterCategory] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -81,44 +72,89 @@ export default function Dashboard() {
       }
     };
 
-    const loadPie = async () => {
-      try {
-        const res = await fetch(`${API}/api/dashboard/pie-expenses`);
-        if (!res.ok) throw new Error("pie fetch failed");
-        const json = await res.json();
-        if (!json || !Array.isArray(json.data)) return;
-        const d = json.data.map((it) => ({
-          _id: it._id,
-          name: it.name || "Altro",
-          icon: it.icon || "💸",
-          color: it.color || "#AAAAAA",
-          value: safeNumber(it.value),
-          percentage: safeNumber(it.percentage),
-        }));
-        if (mounted) setPie({ total: safeNumber(json.total), data: d });
-      } catch (err) {
-        console.error("Error loading pie:", err);
-      }
-    };
-
     loadSummary();
     loadMonthly();
-    loadPie();
 
     return () => {
       mounted = false;
     };
   }, []);
 
-  const latest = Array.isArray(transactions)
-    ? [...transactions]
-        .sort((a, b) => {
-          const da = a.createdAt || a.date;
-          const db = b.createdAt || b.date;
-          return new Date(db) - new Date(da);
-        })
-        .slice(0, 5)
-    : [];
+  // Ultime transazioni: ordine di inserimento (createdAt verso il basso)
+  const latest = useMemo(() => {
+    if (!Array.isArray(transactions)) return [];
+    return [...transactions]
+      .sort((a, b) => {
+        const da = a.createdAt || a.date;
+        const db = b.createdAt || b.date;
+        return new Date(db) - new Date(da);
+      })
+      .slice(0, 5);
+  }, [transactions]);
+
+  // Funzione per risolvere la categoria a partire da id/stringa/oggetto
+  const resolveCategory = (catField) => {
+    if (!catField) return null;
+    if (typeof catField === "object") {
+      if (catField._id || catField.name) return catField;
+      if (catField.$oid) {
+        const found = categories.find((c) => c._id === catField.$oid);
+        return found || null;
+      }
+      return null;
+    }
+    if (typeof catField === "string") {
+      const found = categories.find((c) => c._id === catField);
+      return found || null;
+    }
+    return null;
+  };
+
+  // Grafico a torta: calcolato lato frontend in base a transazioni + categorie
+  const pieData = useMemo(() => {
+    if (!Array.isArray(transactions)) return { total: 0, data: [] };
+
+    const now = new Date();
+    const days30Ago = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const expenses = transactions.filter((t) => {
+      const amount = safeNumber(t.amount);
+      if (amount >= 0) return false; // solo uscite
+      if (!t.date) return true;
+      const d = new Date(t.date);
+      return d >= days30Ago && d <= now;
+    });
+
+    if (expenses.length === 0) return { total: 0, data: [] };
+
+    const groups = new Map();
+    let totalAbs = 0;
+
+    for (const t of expenses) {
+      const amountAbs = Math.abs(safeNumber(t.amount));
+      const cat = resolveCategory(t.category);
+      const key = cat?._id || "altro";
+
+      const current = groups.get(key) || {
+        _id: key,
+        name: cat?.name || "Altro",
+        icon: cat?.icon || "💸",
+        color: cat?.color || "#AAAAAA",
+        value: 0,
+      };
+
+      current.value += amountAbs;
+      groups.set(key, current);
+      totalAbs += amountAbs;
+    }
+
+    const data = Array.from(groups.values()).map((g) => ({
+      ...g,
+      percentage: totalAbs > 0 ? Number(((g.value / totalAbs) * 100).toFixed(1)) : 0,
+    }));
+
+    return { total: totalAbs, data };
+  }, [transactions, categories]);
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
@@ -157,11 +193,9 @@ export default function Dashboard() {
         <div>
           <h3 className="font-semibold mb-3">Suddivisione uscite</h3>
           <ExpensePieChart
-            data={pie.data}
-            onLegendClick={(id) =>
-              setFilterCategory(filterCategory === id ? null : id)
-            }
-            activeId={filterCategory}
+            data={pieData.data}
+            onLegendClick={() => {}}
+            activeId={null}
           />
         </div>
       </div>
@@ -169,30 +203,31 @@ export default function Dashboard() {
       <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-3">Ultime transazioni</h3>
         <div className="divide-y">
-          {latest.map((tx) => (
-            <div key={tx._id} className="py-2 flex justify-between">
-              <div>
-                <div className="text-sm text-gray-500">
-                  {tx.date ? new Date(tx.date).toLocaleDateString() : "-"}
+          {latest.map((tx) => {
+            const cat = resolveCategory(tx.category);
+            return (
+              <div key={tx._id} className="py-2 flex justify-between">
+                <div>
+                  <div className="text-sm text-gray-500">
+                    {tx.date ? new Date(tx.date).toLocaleDateString() : "-"}
+                  </div>
+                  <div className="font-medium">{tx.description || "—"}</div>
+                  <div className="text-xs text-gray-500">
+                    {cat ? cat.name : "—"}
+                  </div>
                 </div>
-                <div className="font-medium">{tx.description || "—"}</div>
-                <div className="text-xs text-gray-500">
-                  {tx.category && typeof tx.category === "object"
-                    ? tx.category.name
-                    : tx.category || "—"}
+                <div
+                  className={`${
+                    safeNumber(tx.amount) >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  } font-semibold`}
+                >
+                  {formatEuro(tx.amount)}
                 </div>
               </div>
-              <div
-                className={`${
-                  safeNumber(tx.amount) >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                } font-semibold`}
-              >
-                {formatEuro(tx.amount)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
