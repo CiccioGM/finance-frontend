@@ -4,6 +4,7 @@ import { useTransactions } from "../context/TransactionsContext";
 import { useCategories } from "../context/CategoriesContext";
 import MonthlyBarChart from "../components/MonthlyBarChart";
 import ExpensePieChart from "../components/ExpensePieChart";
+import TransactionList from "../components/TransactionList";
 
 function safeNumber(v) {
   const n = Number(v);
@@ -171,8 +172,8 @@ export default function Dashboard() {
     if (!Array.isArray(filteredTransactions)) return [];
     return [...filteredTransactions]
       .sort((a, b) => {
-        const da = a.createdAt || a.date;
-        const db = b.createdAt || b.date;
+        const da = a.date || a.createdAt;
+        const db = b.date || b.createdAt;
         return new Date(db) - new Date(da);
       })
       .slice(0, 5);
@@ -241,38 +242,7 @@ export default function Dashboard() {
           Ultime transazioni
           {activeCategoryName ? ` – solo ${activeCategoryName}` : ""}
         </h3>
-        <div className="divide-y">
-          {latest.map((tx) => {
-            const cat = resolveCategory(categories, tx.category);
-            return (
-              <div key={tx._id} className="py-2 flex justify-between">
-                <div>
-                  <div className="text-sm text-gray-500">
-                    {tx.date ? new Date(tx.date).toLocaleDateString() : "-"}
-                  </div>
-                  <div className="font-medium">{tx.description || "—"}</div>
-                  <div className="text-xs text-gray-500">
-                    {cat ? cat.name : "—"}
-                  </div>
-                </div>
-                <div
-                  className={`${
-                    safeNumber(tx.amount) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  } font-semibold`}
-                >
-                  {formatEuro(tx.amount)}
-                </div>
-              </div>
-            );
-          })}
-          {latest.length === 0 && (
-            <div className="text-sm text-gray-500 py-2">
-              Nessuna transazione trovata per questo filtro.
-            </div>
-          )}
-        </div>
+        <TransactionList items={latest} />
       </div>
     </div>
   );
