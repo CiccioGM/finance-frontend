@@ -1,11 +1,13 @@
 // src/components/TransactionList.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useTransactions } from "../context/TransactionsContext";
+import { useCategories } from "../context/CategoriesContext";
 import AddTransactionModal from "./AddTransactionModal";
 import { MoreVertical } from "lucide-react";
 
 export default function TransactionList({ items }) {
   const { deleteTransaction } = useTransactions();
+  const { categories } = useCategories();
   const [editing, setEditing] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRefs = useRef({});
@@ -43,73 +45,91 @@ export default function TransactionList({ items }) {
     setOpenMenuId(null);
   };
 
+  const resolveCategory = (catField) => {
+    if (!catField) return null;
+    if (typeof catField === "object") {
+      if (catField._id || catField.name) return catField;
+      if (catField.$oid) {
+        const found = categories.find((c) => c._id === catField.$oid);
+        return found || null;
+      }
+      return null;
+    }
+    if (typeof catField === "string") {
+      const found = categories.find((c) => c._id === catField);
+      return found || null;
+    }
+    return null;
+  };
+
   return (
     <div>
       <ul className="divide-y">
-        {items.map((tx) => (
-          <li
-            key={tx._id}
-            className="py-3 flex justify-between items-center gap-3"
-          >
-            <div>
-              <div className="text-sm text-gray-600">
-                {tx.date ? new Date(tx.date).toLocaleDateString() : "-"}
-              </div>
-              <div className="font-medium">{tx.description || "—"}</div>
-              <div className="text-xs text-gray-500">
-                {tx.category && typeof tx.category === "object"
-                  ? tx.category.name
-                  : tx.category || "—"}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div
-                className={`${
-                  tx.amount >= 0 ? "text-green-600" : "text-red-600"
-                } font-semibold text-sm`}
-              >
-                {Number(tx.amount || 0).toFixed(2)} €
+        {items.map((tx) => {
+          const cat = resolveCategory(tx.category);
+          return (
+            <li
+              key={tx._id}
+              className="py-3 flex justify-between items-center gap-3"
+            >
+              <div>
+                <div className="text-sm text-gray-600">
+                  {tx.date ? new Date(tx.date).toLocaleDateString() : "-"}
+                </div>
+                <div className="font-medium">{tx.description || "—"}</div>
+                <div className="text-xs text-gray-500">
+                  {cat ? cat.name : "—"}
+                </div>
               </div>
 
-              <div
-                className="relative"
-                ref={(el) => {
-                  menuRefs.current[tx._id] = el;
-                }}
-              >
-                <button
-                  type="button"
-                  className="p-1 rounded-full hover:bg-gray-100"
-                  onClick={() =>
-                    setOpenMenuId((prev) => (prev === tx._id ? null : tx._id))
-                  }
+              <div className="flex items-center gap-2">
+                <div
+                  className={`${
+                    tx.amount >= 0 ? "text-green-600" : "text-red-600"
+                  } font-semibold text-sm`}
                 >
-                  <MoreVertical size={18} />
-                </button>
+                  {Number(tx.amount || 0).toFixed(2)} €
+                </div>
 
-                {openMenuId === tx._id && (
-                  <div className="absolute right-0 mt-1 bg-white border rounded shadow z-20 min-w-[120px] text-sm">
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                      onClick={() => handleEdit(tx)}
-                    >
-                      Modifica
-                    </button>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100"
-                      onClick={() => handleDelete(tx)}
-                    >
-                      Elimina
-                    </button>
-                  </div>
-                )}
+                <div
+                  className="relative"
+                  ref={(el) => {
+                    menuRefs.current[tx._id] = el;
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="p-1 rounded-full hover:bg-gray-100"
+                    onClick={() =>
+                      setOpenMenuId((prev) => (prev === tx._id ? null : tx._id))
+                    }
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+
+                  {openMenuId === tx._id && (
+                    <div className="absolute right-0 mt-1 bg-white border rounded shadow z-20 min-w-[120px] text-sm">
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100"
+                        onClick={() => handleEdit(tx)}
+                      >
+                        Modifica
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100"
+                        onClick={() => handleDelete(tx)}
+                      >
+                        Elimina
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       <AddTransactionModal
