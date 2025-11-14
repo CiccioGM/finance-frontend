@@ -20,6 +20,11 @@ function formatMonthLabel(m) {
   return `${mm}/${yy}`;
 }
 
+function formatEuro(v) {
+  const n = safeNumber(v);
+  return `€ ${n.toFixed(2)}`;
+}
+
 export default function Dashboard() {
   const txContext = useTransactions();
   const catContext = useCategories();
@@ -109,27 +114,28 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
+      {/* 3 card sempre in riga, testo con € davanti e no wrap */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-white p-3 md:p-4 rounded shadow">
           <div className="text-xs md:text-sm text-gray-500">Saldo</div>
-          <div className="text-lg md:text-2xl font-semibold">
-            {summary.saldo.toFixed(2)} €
+          <div className="text-base md:text-2xl font-semibold whitespace-nowrap">
+            {formatEuro(summary.saldo)}
           </div>
         </div>
         <div className="bg-white p-3 md:p-4 rounded shadow">
           <div className="text-xs md:text-sm text-gray-500">
             Entrate (30gg)
           </div>
-          <div className="text-lg md:text-2xl font-semibold">
-            {summary.entrate30.toFixed(2)} €
+          <div className="text-base md:text-2xl font-semibold whitespace-nowrap">
+            {formatEuro(summary.entrate30)}
           </div>
         </div>
         <div className="bg-white p-3 md:p-4 rounded shadow">
           <div className="text-xs md:text-sm text-gray-500">
             Uscite (30gg)
           </div>
-          <div className="text-lg md:text-2xl font-semibold">
-            {summary.uscite30.toFixed(2)} €
+          <div className="text-base md:text-2xl font-semibold whitespace-nowrap">
+            {formatEuro(summary.uscite30)}
           </div>
         </div>
       </div>
@@ -175,7 +181,7 @@ export default function Dashboard() {
                     : "text-red-600"
                 } font-semibold`}
               >
-                {safeNumber(tx.amount).toFixed(2)} €
+                {formatEuro(tx.amount)}
               </div>
             </div>
           ))}
