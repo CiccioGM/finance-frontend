@@ -1,7 +1,9 @@
 // src/pages/Dashboard.jsx
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTransactions } from "../context/TransactionsContext";
 import { useCategories } from "../context/CategoriesContext";
+import { useBudgets } from "../context/BudgetsContext";
 import MonthlyBarChart from "../components/MonthlyBarChart";
 import ExpensePieChart from "../components/ExpensePieChart";
 import TransactionList from "../components/TransactionList";
@@ -42,9 +44,9 @@ function resolveCategory(categories, catField) {
 export default function Dashboard({ pieLegendPosition = "side" }) {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
+  const { budgets } = useBudgets();
   const [activeCategoryId, setActiveCategoryId] = useState(null);
 
-  // Tutta la Dashboard si basa su filteredTransactions
   const filteredTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
     if (!activeCategoryId) return transactions;
@@ -123,7 +125,6 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
     }));
   }, [filteredTransactions]);
 
-  // Dati per grafico a torta: sempre basato su TUTTE le uscite ultimi 30gg
   const pieData = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
 
@@ -170,7 +171,6 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
     return arr;
   }, [transactions, categories]);
 
-  // Ultime transazioni → ordinate per DATA (non per createdAt)
   const latest = useMemo(() => {
     if (!Array.isArray(filteredTransactions)) return [];
     return [...filteredTransactions]
@@ -181,6 +181,54 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
       })
       .slice(0, 5);
   }, [filteredTransactions]);
+
+  const currentMonthSummary = useMemo(() => {
+    if (!Array.isArray(transactions)) return {};
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const map = {};
+    for (const t of transactions) {
+      if (!t.date) continue;
+      const d = new Date(t.date);
+      if (d < start || d > end) continue;
+      const amount = safeNumber(t.amount);
+      if (amount >= 0) continue;
+
+      const catId =
+        typeof t.category === "object"
+          ? t.category._id || t.category.$oid
+          : t.category;
+      if (!catId) continue;
+
+      map[catId] = (map[catId] || 0) + Math.abs(amount);
+    }
+    return map;
+  }, [transactions]);
+
+  const budgetsWithInfo = useMemo(() => {
+    return (budgets || []).map((b) => {
+      const catId =
+        typeof b.category === "object"
+          ? b.category._id || b.category.$oid
+          : b.category;
+      const cat = categories.find((c) => c._id === catId);
+      const spent = currentMonthSummary[catId] || 0;
+      const ratio =
+        b.limit > 0 ? Math.min(1, spent / b.limit) : 0;
+      const ratioPct =
+        b.limit > 0 ? ((spent / b.limit) * 100).toFixed(0) : "0";
+      return {
+        ...b,
+        categoryId: catId,
+        categoryName: cat?.name || "Categoria sconosciuta",
+        spent,
+        ratio,
+        ratioPct,
+      };
+    });
+  }, [budgets, categories, currentMonthSummary]);
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
@@ -216,7 +264,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
         <MonthlyBarChart data={monthlyData} />
       </div>
 
-      {/* GRAFICO A TORTA + LEGENDA CONTROLLER DEL FILTRO */}
+      {/* GRAFICO A TORTA */}
       <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-3">
           Suddivisione uscite (ultimi 30gg)
@@ -229,10 +277,59 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
         />
       </div>
 
-      {/* ULTIME TRANSAZIONI (filtrate dalla stessa logica) */}
+      {/* ULTIME TRANSAZIONI + VEDI TUTTE */}
       <div className="bg-white p-4 rounded shadow">
-        <h3 className="font-semibold mb-3">Ultime transazioni</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Ultime transazioni</h3>
+          <Link
+            to="/transactions"
+            className="text-xs text-blue-600 underline"
+          >
+            Vedi tutte
+          </Link>
+        </div>
         <TransactionList items={latest} />
+      </div>
+
+      {/* RIEPILOGO BUDGET */}
+      <div className="bg-white p-4 rounded shadow">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Riepilogo Budget</h3>
+          <Link to="/budget" className="text-xs text-blue-600 underline">
+            Modifica Budget
+          </Link>
+        </div>
+        {budgetsWithInfo.length === 0 ? (
+          <div className="text-sm text-gray-500">
+            Nessun budget impostato. Puoi aggiungerli dalla pagina Budget.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {budgetsWithInfo.map((b) => (
+              <div key={b._id} className="border rounded px-3 py-2">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="font-semibold">{b.categoryName}</span>
+                  <span>
+                    {formatEuro(b.spent)} / {formatEuro(b.limit)} (
+                    {b.ratioPct}%)
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded">
+                  <div
+                    className={`h-2 rounded ${
+                      b.ratio < 0.8
+                        ? "bg-green-500"
+                        : b.ratio < 1
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                    }`}
+                    style={{ width: `${b.ratio * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
