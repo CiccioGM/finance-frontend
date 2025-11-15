@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { MoreVertical } from "lucide-react";
 import { useTransactions } from "../context/TransactionsContext";
+import { useCategories } from "../context/CategoriesContext";
 import AddTransactionModal from "./AddTransactionModal";
 
 function formatEuro(amount) {
@@ -22,8 +23,24 @@ function getType(amount) {
   return n >= 0 ? "entrata" : "uscita";
 }
 
+function resolveCategory(categories, catField) {
+  if (!catField) return null;
+  if (typeof catField === "object") {
+    if (catField._id || catField.name) return catField;
+    if (catField.$oid) {
+      return categories.find((c) => c._id === catField.$oid) || null;
+    }
+    return null;
+  }
+  if (typeof catField === "string") {
+    return categories.find((c) => c._id === catField) || null;
+  }
+  return null;
+}
+
 export default function TransactionList({ transactions, items }) {
   const { deleteTransaction } = useTransactions();
+  const { categories } = useCategories();
 
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRefs = useRef({});
@@ -102,14 +119,9 @@ export default function TransactionList({ transactions, items }) {
           const type = getType(t.amount);
           const isEntrata = type === "entrata";
 
-          const categoryName =
-            typeof t.category === "object"
-              ? t.category.name
-              : t.categoryName || "";
-          const categoryIcon =
-            typeof t.category === "object"
-              ? t.category.icon
-              : t.categoryIcon || "";
+          const cat = resolveCategory(categories, t.category);
+          const categoryName = cat?.name || "";
+          const categoryIcon = cat?.icon || "💸";
 
           return (
             <div
@@ -122,7 +134,7 @@ export default function TransactionList({ transactions, items }) {
                     isEntrata ? "bg-green-100" : "bg-red-100"
                   }`}
                 >
-                  {categoryIcon || (isEntrata ? "⬆️" : "⬇️")}
+                  {categoryIcon}
                 </div>
                 <div>
                   <div className="text-sm font-semibold">
