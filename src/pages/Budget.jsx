@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import { useCategories } from "../context/CategoriesContext";
 import { useTransactions } from "../context/TransactionsContext";
 import { useBudgets } from "../context/BudgetsContext";
+import AddBudgetModal from "../components/AddBudgetModal";
 
 function safeNumber(v) {
   const n = Number(v);
@@ -20,32 +21,15 @@ export default function Budget() {
   const { budgets, createBudget, deleteBudget, loading, error } = useBudgets();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [categoryId, setCategoryId] = useState("");
-  const [limit, setLimit] = useState("");
 
   const openModal = () => setIsModalOpen(true);
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setCategoryId("");
-    setLimit("");
-  };
+  const closeModal = () => setIsModalOpen(false);
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    if (!categoryId) {
-      alert("Seleziona una categoria");
-      return;
-    }
-    const lim = safeNumber(limit);
-    if (lim <= 0) {
-      alert("Inserisci un importo valido");
-      return;
-    }
-
+  const handleSaveBudget = async ({ categoryId, limit }) => {
     try {
       await createBudget({
         category: categoryId,
-        limit: lim,
+        limit,
         period: "monthly",
       });
       closeModal();
@@ -191,63 +175,14 @@ export default function Budget() {
         )}
       </div>
 
-      {/* MODAL semitrasparente per creazione budget */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow max-w-sm w-full mx-4 p-4">
-            <h3 className="text-base font-semibold mb-3">
-              Nuovo budget mensile
-            </h3>
-
-            <form onSubmit={handleAdd} className="space-y-3">
-              <div>
-                <label className="block text-sm mb-1">Categoria</label>
-                <select
-                  className="w-full border rounded px-2 py-1"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                >
-                  <option value="">Seleziona una categoria</option>
-                  {categories.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {(c.icon || "💼") + " " + c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">Limite mensile</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="w-full border rounded px-2 py-1"
-                  value={limit}
-                  onChange={(e) => setLimit(e.target.value)}
-                  placeholder="Es. 500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-3 py-2 text-sm rounded border border-gray-300"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-2 text-sm rounded bg-blue-600 text-white"
-                  disabled={loading}
-                >
-                  {loading ? "Salvataggio..." : "Salva budget"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODAL Nuovo Budget */}
+      <AddBudgetModal
+        open={isModalOpen}
+        onClose={closeModal}
+        categories={categories}
+        onSave={handleSaveBudget}
+        loading={loading}
+      />
     </div>
   );
 }
