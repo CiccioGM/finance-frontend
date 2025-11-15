@@ -20,12 +20,12 @@ export default function ExpensePieChart({
     else onActiveChange(id);
   };
 
-  // Costruiamo i dati per il grafico con un campo "id" sicuro
+  // Dati normalizzati per Recharts, con un campo "id" sicuro
   const chartData = useMemo(
     () =>
       (Array.isArray(data) ? data : []).map((item) => ({
         ...item,
-        id: item._id || item.id, // fallback se arriva già "id"
+        id: item._id || item.id,
       })),
     [data]
   );
@@ -47,7 +47,7 @@ export default function ExpensePieChart({
     return <div className="text-sm text-gray-500">Nessun dato disponibile.</div>;
   }
 
-  // BLOCCO GRAFICO (uguale per entrambe le varianti)
+  // BLOCCO GRAFICO: qui gestiamo il click sulla fetta
   const PieBlock = (
     <ResponsiveContainer>
       <PieChart>
@@ -60,6 +60,11 @@ export default function ExpensePieChart({
           outerRadius={80}
           innerRadius={40}
           paddingAngle={2}
+          onClick={(d) => {
+            // d è l'oggetto evento di Recharts
+            const id = d?.payload?.id;
+            handleToggle(id);
+          }}
         >
           {chartData.map((entry) => {
             const { opacity, strokeWidth } = getOpacityAndStroke(entry);
@@ -70,8 +75,6 @@ export default function ExpensePieChart({
                 stroke="#ffffff"
                 strokeWidth={strokeWidth}
                 fillOpacity={opacity}
-                // 👇 QUI: click sulla fetta → stesso comportamento della legenda
-                onClick={() => handleToggle(entry.id)}
               />
             );
           })}
@@ -80,7 +83,7 @@ export default function ExpensePieChart({
     </ResponsiveContainer>
   );
 
-  // BLOCCO LEGENDA
+  // BLOCCO LEGENDA: stessa logica di filtro
   const LegendBlock = (
     <div className="w-full space-y-1">
       {chartData.map((entry) => {
