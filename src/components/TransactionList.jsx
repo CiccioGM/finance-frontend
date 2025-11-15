@@ -22,13 +22,20 @@ function getType(amount) {
   return n >= 0 ? "entrata" : "uscita";
 }
 
-export default function TransactionList({ transactions = [] }) {
+export default function TransactionList({ transactions, items }) {
   const { deleteTransaction } = useTransactions();
 
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRefs = useRef({});
   const [editing, setEditing] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // sorgente dati: prima items (se presente), altrimenti transactions
+  const source = useMemo(() => {
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(transactions)) return transactions;
+    return [];
+  }, [items, transactions]);
 
   // chiusura menù a tre puntini cliccando fuori
   useEffect(() => {
@@ -48,12 +55,14 @@ export default function TransactionList({ transactions = [] }) {
   }, [openMenuId]);
 
   const sortedTransactions = useMemo(() => {
-    // Ordina per data (più recente prima); se manca, lascia l'ordine com'è
-    return [...transactions].sort((a, b) => {
-      if (!a.date || !b.date) return 0;
-      return new Date(b.date) - new Date(a.date);
+    // Ordina per data (più recente prima); se manca, mantiene l'ordine
+    return [...source].sort((a, b) => {
+      const da = a.date || a.createdAt;
+      const db = b.date || b.createdAt;
+      if (!da || !db) return 0;
+      return new Date(db) - new Date(da);
     });
-  }, [transactions]);
+  }, [source]);
 
   const handleEdit = (tx) => {
     setEditing(tx);
