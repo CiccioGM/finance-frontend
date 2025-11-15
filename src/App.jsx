@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
+import Budget from "./pages/Budget";
 import AddTransactionPage from "./pages/AddTransactionPage";
 import AddTransactionModal from "./components/AddTransactionModal";
 
@@ -22,7 +23,6 @@ export default function App() {
     if (saved === "bottom" || saved === "side") {
       setPieLegendPosition(saved);
     } else {
-      // default: smartphone in basso, PC a destra
       const width = window.innerWidth || 0;
       if (width < 768) {
         setPieLegendPosition("bottom");
@@ -45,6 +45,7 @@ export default function App() {
             />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/categories" element={<Categories />} />
+            <Route path="/budget" element={<Budget />} />
             <Route
               path="/settings"
               element={
@@ -58,7 +59,10 @@ export default function App() {
           </Routes>
         </main>
 
-        <AddTransactionModal open={isAddModalOpen} onClose={closeAddModal} />
+        <AddTransactionModal
+          open={isAddModalOpen}
+          onClose={closeAddModal}
+        />
       </div>
     </BrowserRouter>
   );
