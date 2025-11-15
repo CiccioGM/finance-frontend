@@ -8,10 +8,15 @@ import AddCategoryModal from "../components/AddCategoryModal";
 export default function Categories() {
   const { categories, deleteCategory } = useCategories();
   const { createBudget } = useBudgets();
+
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRefs = useRef({});
+
+  // Per rilevare nuove categorie create
+  const prevCatIdsRef = useRef([]);
+  const prevAddOpenRef = useRef(false);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -54,27 +59,56 @@ export default function Categories() {
     setAddOpen(true);
   };
 
-  // chiamata dopo il salvataggio di una nuova categoria
-  const handleCategorySaved = async (savedCategory) => {
-    if (!savedCategory || !savedCategory._id) return;
+  // 🔥 Rileva nuove categorie e chiede se creare budget da 500 €
+  useEffect(() => {
+    const currentIds = categories.map((c) => c._id);
+    const prevIds = prevCatIdsRef.current;
+
+    // ID che prima non c'erano
+    const newIds = currentIds.filter((id) => !prevIds.includes(id));
+
+    // aggiorno lo snapshot per la prossima volta
+    prevCatIdsRef.current = currentIds;
+
+    const modalAppenaChiuso =
+      prevAddOpenRef.current === true && addOpen === false;
+
+    // Salvo lo stato corrente di addOpen per il prossimo ciclo
+    prevAddOpenRef.current = addOpen;
+
+    // Se non ci sono nuovi id, non facciamo nulla
+    if (newIds.length === 0) return;
+
+    // Consideriamo solo il caso "nuova categoria", non modifica:
+    // - modal chiuso
+    // - editing è null (non stavamo modificando)
+    if (!modalAppenaChiuso || editing !== null) return;
+
+    // Prendiamo l'ultima categoria nuova trovata
+    const newId = newIds[newIds.length - 1];
+    const newCat = categories.find((c) => c._id === newId);
+    if (!newCat) return;
 
     const wantBudget = window.confirm(
-      "Vuoi creare un budget di € 500,00 per questa nuova categoria?"
+      `Vuoi creare un budget di € 500,00 per la nuova categoria "${newCat.name}"?`
     );
 
     if (!wantBudget) return;
 
-    try {
-      await createBudget({
-        category: savedCategory._id,
-        limit: 500,
-        period: "monthly",
-      });
-    } catch (e) {
-      console.error("Errore creazione budget automatico:", e);
-      // opzionale: alert("Categoria creata, ma errore nella creazione del budget.");
-    }
-  };
+    // Creazione budget standard 500 €
+    (async () => {
+      try {
+        await createBudget({
+          category: newCat._id,
+          limit: 500,
+          period: "monthly",
+        });
+      } catch (e) {
+        console.error("Errore creazione budget automatico:", e);
+        // opzionale: alert("Categoria creata, ma errore nella creazione del budget.");
+      }
+    })();
+  }, [categories, addOpen, editing, createBudget]);
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-4">
@@ -154,7 +188,6 @@ export default function Categories() {
           setEditing(null);
         }}
         initial={editing}
-        onSaved={handleCategorySaved}
       />
     </div>
   );
