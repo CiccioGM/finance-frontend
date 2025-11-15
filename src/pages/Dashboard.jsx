@@ -288,7 +288,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
             Vedi tutte
           </Link>
         </div>
-        <TransactionList items={latest} />
+        <TransactionList transactions={latest} />
       </div>
 
       {/* RIEPILOGO BUDGET */}
