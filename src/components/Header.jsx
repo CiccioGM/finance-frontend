@@ -29,7 +29,7 @@ export default function Header({ onNewTransaction }) {
   }, [menuOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white border-b z-30">
+    <header className="fixed top-0 left-0 right-0 bg-white border-b z-10">
       <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
         {/* Nome app */}
         <div className="flex items-center gap-4">
