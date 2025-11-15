@@ -193,7 +193,7 @@ export default function Budget() {
 
       {/* MODAL semitrasparente per creazione budget */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow max-w-sm w-full mx-4 p-4">
             <h3 className="text-base font-semibold mb-3">
               Nuovo budget mensile
