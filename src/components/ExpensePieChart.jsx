@@ -1,5 +1,5 @@
 // src/components/ExpensePieChart.jsx
-import React, { useMemo } from "react";
+import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 function formatEuro(v) {
@@ -12,26 +12,20 @@ export default function ExpensePieChart({
   data,
   activeId,
   onActiveChange,
-  legendPosition = "side", // "side" = legenda a destra, "bottom" = sotto
+  legendPosition = "side", // "side" = destra, "bottom" = sotto
 }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return <div className="text-sm text-gray-500">Nessun dato disponibile.</div>;
+  }
+
   const handleToggle = (id) => {
     if (!onActiveChange || !id) return;
     if (activeId === id) onActiveChange(null);
     else onActiveChange(id);
   };
 
-  // Normalizziamo i dati e aggiungiamo un campo "id" sicuro
-  const chartData = useMemo(
-    () =>
-      (Array.isArray(data) ? data : []).map((item) => ({
-        ...item,
-        id: item._id || item.id, // id di categoria
-      })),
-    [data]
-  );
-
   const getOpacityAndStroke = (entry) => {
-    const isActive = activeId === entry.id;
+    const isActive = activeId === entry._id;
     if (isActive) {
       return { opacity: 1, strokeWidth: 3 };
     }
@@ -41,18 +35,11 @@ export default function ExpensePieChart({
     return { opacity: 0.9, strokeWidth: 1 };
   };
 
-  const isSide = legendPosition === "side";
-
-  if (!Array.isArray(chartData) || chartData.length === 0) {
-    return <div className="text-sm text-gray-500">Nessun dato disponibile.</div>;
-  }
-
-  // BLOCCO GRAFICO – qui usiamo SOLO l'indice
   const PieBlock = (
     <ResponsiveContainer>
       <PieChart>
         <Pie
-          data={chartData}
+          data={data}
           dataKey="value"
           nameKey="name"
           cx="50%"
@@ -60,19 +47,12 @@ export default function ExpensePieChart({
           outerRadius={80}
           innerRadius={40}
           paddingAngle={2}
-          // 👇 firma ufficiale: (data, index)
-          onClick={(_, index) => {
-            if (index == null) return;
-            const entry = chartData[index];
-            if (!entry || !entry.id) return;
-            handleToggle(entry.id);
-          }}
         >
-          {chartData.map((entry) => {
+          {data.map((entry) => {
             const { opacity, strokeWidth } = getOpacityAndStroke(entry);
             return (
               <Cell
-                key={entry.id}
+                key={entry._id}
                 fill={entry.color || "#AAAAAA"}
                 stroke="#ffffff"
                 strokeWidth={strokeWidth}
@@ -85,16 +65,15 @@ export default function ExpensePieChart({
     </ResponsiveContainer>
   );
 
-  // BLOCCO LEGENDA – già funzionava, lo lasciamo uguale
   const LegendBlock = (
     <div className="w-full space-y-1">
-      {chartData.map((entry) => {
-        const isActive = activeId === entry.id;
+      {data.map((entry) => {
+        const isActive = activeId === entry._id;
         return (
           <button
-            key={entry.id}
+            key={entry._id}
             type="button"
-            onClick={() => handleToggle(entry.id)}
+            onClick={() => handleToggle(entry._id)}
             className={`w-full flex items-center justify-between px-2 py-1 rounded text-left ${
               isActive ? "bg-gray-50" : ""
             }`}
@@ -123,25 +102,19 @@ export default function ExpensePieChart({
     </div>
   );
 
-  // DESKTOP: legenda a destra
-  if (isSide) {
+  // DESKTOP / SCELTA: legenda a destra
+  if (legendPosition === "side") {
     return (
-      <div
-        className="flex flex-row gap-3 w-full"
-        style={{ overflow: "hidden", pointerEvents: "auto" }}
-      >
+      <div className="flex flex-row gap-3 w-full">
         <div className="w-[45%] h-56 md:h-64">{PieBlock}</div>
         <div className="w-[55%]">{LegendBlock}</div>
       </div>
     );
   }
 
-  // MOBILE: legenda sotto
+  // MOBILE / SCELTA: legenda sotto
   return (
-    <div
-      className="flex flex-col gap-3 w-full"
-      style={{ overflow: "hidden", pointerEvents: "auto" }}
-    >
+    <div className="flex flex-col gap-3 w-full">
       <div className="w-full h-56 md:h-64">{PieBlock}</div>
       <div className="w-full">{LegendBlock}</div>
     </div>
