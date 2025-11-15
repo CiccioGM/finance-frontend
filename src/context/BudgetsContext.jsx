@@ -33,36 +33,41 @@ export function BudgetsProvider({ children }) {
 
   useEffect(() => {
     fetchBudgets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createBudget = async ({ category, limit, period = "monthly" }) => {
-    try {
-      const res = await fetch(`${baseUrl}/api/budgets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, limit, period }),
-      });
-      if (!res.ok) throw new Error("Errore creazione budget");
-      const saved = await res.json();
-      setBudgets((prev) => [...prev, saved]);
-      return saved;
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
+    const res = await fetch(`${baseUrl}/api/budgets`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category, limit, period }),
+    });
+    if (!res.ok) throw new Error("Errore creazione budget");
+    const saved = await res.json();
+    setBudgets((prev) => [...prev, saved]);
+    return saved;
+  };
+
+  const updateBudget = async (id, update) => {
+    const res = await fetch(`${baseUrl}/api/budgets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(update),
+    });
+    if (!res.ok) throw new Error("Errore aggiornamento budget");
+    const updated = await res.json();
+    setBudgets((prev) =>
+      prev.map((b) => (b._id === id ? updated : b))
+    );
+    return updated;
   };
 
   const deleteBudget = async (id) => {
-    try {
-      const res = await fetch(`${baseUrl}/api/budgets/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Errore eliminazione budget");
-      setBudgets((prev) => prev.filter((b) => b._id !== id));
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
+    const res = await fetch(`${baseUrl}/api/budgets/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Errore eliminazione budget");
+    setBudgets((prev) => prev.filter((b) => b._id !== id));
   };
 
   const value = {
@@ -71,6 +76,7 @@ export function BudgetsProvider({ children }) {
     error,
     fetchBudgets,
     createBudget,
+    updateBudget,
     deleteBudget,
   };
 
