@@ -16,6 +16,12 @@ function formatEuro(v) {
   return `€ ${n.toFixed(2)}`;
 }
 
+function getRatioColorClass(ratio) {
+  if (ratio < 0.8) return "text-green-600";
+  if (ratio < 1) return "text-orange-500";
+  return "text-red-600";
+}
+
 export default function Budget() {
   const { categories } = useCategories();
   const { transactions } = useTransactions();
@@ -193,8 +199,10 @@ export default function Budget() {
                   <div className="flex justify-between text-xs mb-1">
                     <span>Speso questo mese</span>
                     <span>
-                      {formatEuro(b.spent)} / {formatEuro(b.limit)} (
-                      {b.ratioPct}%)
+                      {formatEuro(b.spent)} / {formatEuro(b.limit)}{" "}
+                      <span className={getRatioColorClass(b.ratio)}>
+                        ({b.ratioPct}%)
+                      </span>
                     </span>
                   </div>
                   <div className="w-full h-2 bg-gray-200 rounded">
@@ -203,7 +211,7 @@ export default function Budget() {
                         b.ratio < 0.8
                           ? "bg-green-500"
                           : b.ratio < 1
-                          ? "bg-yellow-500"
+                          ? "bg-orange-400"
                           : "bg-red-500"
                       }`}
                       style={{ width: `${b.ratio * 100}%` }}
@@ -215,13 +223,16 @@ export default function Budget() {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={openNewModal}
-          className="mt-2 px-3 py-2 bg-blue-600 text-white rounded text-sm"
-        >
-          + Aggiungi budget
-        </button>
+        {/* Pulsante centrato */}
+        <div className="mt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={openNewModal}
+            className="px-3 py-2 bg-blue-600 text-white rounded text-sm"
+          >
+            + Aggiungi budget
+          </button>
+        </div>
 
         {error && (
           <div className="text-sm text-red-600 mt-2">
