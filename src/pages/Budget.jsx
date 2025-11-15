@@ -21,9 +21,22 @@ export default function Budget() {
   const { budgets, deleteBudget, error } = useBudgets();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(null);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openNewModal = () => {
+    setEditingBudget(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (budget) => {
+    setEditingBudget(budget);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingBudget(null);
+  };
 
   const handleDelete = async (id) => {
     try {
@@ -112,13 +125,22 @@ export default function Budget() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(b._id)}
-                    className="text-xs text-red-600 underline"
-                  >
-                    Elimina
-                  </button>
+                  <div className="flex items-center gap-3 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(b)}
+                      className="text-blue-600 underline"
+                    >
+                      Modifica
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(b._id)}
+                      className="text-red-600 underline"
+                    >
+                      Elimina
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-1">
@@ -149,7 +171,7 @@ export default function Budget() {
 
         <button
           type="button"
-          onClick={openModal}
+          onClick={openNewModal}
           className="mt-2 px-3 py-2 bg-blue-600 text-white rounded text-sm"
         >
           + Aggiungi budget
@@ -162,8 +184,12 @@ export default function Budget() {
         )}
       </div>
 
-      {/* MODAL Nuovo Budget */}
-      <AddBudgetModal open={isModalOpen} onClose={closeModal} />
+      {/* MODAL Nuovo / Modifica Budget */}
+      <AddBudgetModal
+        open={isModalOpen}
+        onClose={closeModal}
+        initial={editingBudget}
+      />
     </div>
   );
 }
