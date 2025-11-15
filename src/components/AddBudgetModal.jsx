@@ -1,5 +1,6 @@
 // src/components/AddBudgetModal.jsx
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 function safeNumber(v) {
   const n = Number(v);
@@ -39,19 +40,23 @@ export default function AddBudgetModal({
     onSave({ categoryId, limit: lim });
   };
 
-  const handleBackdropClick = (e) => {
-    // se clicchi sullo sfondo scuro, chiudi
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-40"
-      onClick={handleBackdropClick}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+      onClick={onClose}
     >
-      <div className="bg-white rounded-lg shadow max-w-sm w-full mx-4 p-4">
+      <div
+        className="relative bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="absolute right-3 top-3"
+          onClick={onClose}
+          type="button"
+        >
+          ✕
+        </button>
+
         <h3 className="text-base font-semibold mb-3">
           Nuovo budget mensile
         </h3>
@@ -103,6 +108,7 @@ export default function AddBudgetModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
