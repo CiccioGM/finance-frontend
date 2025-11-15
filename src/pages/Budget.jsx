@@ -18,25 +18,12 @@ function formatEuro(v) {
 export default function Budget() {
   const { categories } = useCategories();
   const { transactions } = useTransactions();
-  const { budgets, createBudget, deleteBudget, loading, error } = useBudgets();
+  const { budgets, deleteBudget, error } = useBudgets();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
-
-  const handleSaveBudget = async ({ categoryId, limit }) => {
-    try {
-      await createBudget({
-        category: categoryId,
-        limit,
-        period: "monthly",
-      });
-      closeModal();
-    } catch {
-      alert("Errore durante il salvataggio del budget");
-    }
-  };
 
   const handleDelete = async (id) => {
     try {
@@ -176,13 +163,7 @@ export default function Budget() {
       </div>
 
       {/* MODAL Nuovo Budget */}
-      <AddBudgetModal
-        open={isModalOpen}
-        onClose={closeModal}
-        categories={categories}
-        onSave={handleSaveBudget}
-        loading={loading}
-      />
+      <AddBudgetModal open={isModalOpen} onClose={closeModal} />
     </div>
   );
 }
