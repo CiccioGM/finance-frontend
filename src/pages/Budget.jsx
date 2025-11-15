@@ -19,8 +19,16 @@ export default function Budget() {
   const { transactions } = useTransactions();
   const { budgets, createBudget, deleteBudget, loading, error } = useBudgets();
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [limit, setLimit] = useState("");
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCategoryId("");
+    setLimit("");
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -40,8 +48,7 @@ export default function Budget() {
         limit: lim,
         period: "monthly",
       });
-      setCategoryId("");
-      setLimit("");
+      closeModal();
     } catch {
       alert("Errore durante il salvataggio del budget");
     }
@@ -96,6 +103,7 @@ export default function Budget() {
         ...b,
         categoryId: catId,
         categoryName: cat?.name || "Categoria sconosciuta",
+        categoryIcon: cat?.icon || "💸",
         spent,
         ratio,
         ratioPct,
@@ -105,76 +113,32 @@ export default function Budget() {
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
+      {/* Lista budget esistenti */}
       <div className="bg-white p-4 rounded shadow">
-        <h2 className="text-lg font-semibold mb-4">Budget mensile</h2>
+        <h2 className="text-lg font-semibold mb-3">Budget mensile</h2>
 
-        <form onSubmit={handleAdd} className="space-y-3">
-          <div>
-            <label className="block text-sm mb-1">Categoria</label>
-            <select
-              className="w-full border rounded px-2 py-1"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Seleziona una categoria</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Limite mensile</label>
-            <input
-              type="number"
-              step="0.01"
-              className="w-full border rounded px-2 py-1"
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
-              placeholder="Es. 300"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="px-3 py-2 bg-blue-600 text-white rounded"
-              disabled={loading}
-            >
-              {loading ? "Salvataggio..." : "Aggiungi budget"}
-            </button>
-          </div>
-
-          {error && (
-            <div className="text-sm text-red-600 mt-1">
-              {error}
-            </div>
-          )}
-        </form>
-      </div>
-
-      <div className="bg-white p-4 rounded shadow">
-        <h3 className="font-semibold mb-3">Budget attivi</h3>
         {budgetsWithInfo.length === 0 ? (
-          <div className="text-sm text-gray-500">
-            Nessun budget impostato. Aggiungine uno qui sopra.
+          <div className="text-sm text-gray-500 mb-3">
+            Nessun budget impostato. Puoi aggiungerne uno con il pulsante qui
+            sotto.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 mb-3">
             {budgetsWithInfo.map((b) => (
               <div
                 key={b._id}
                 className="border rounded px-3 py-2 flex flex-col gap-1"
               >
                 <div className="flex justify-between items-center">
-                  <div>
-                    <div className="text-sm font-semibold">
-                      {b.categoryName}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Limite mensile: {formatEuro(b.limit)}
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{b.categoryIcon}</span>
+                    <div>
+                      <div className="text-sm font-semibold">
+                        {b.categoryName}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Limite mensile: {formatEuro(b.limit)}
+                      </div>
                     </div>
                   </div>
                   <button
@@ -211,7 +175,79 @@ export default function Budget() {
             ))}
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={openModal}
+          className="mt-2 px-3 py-2 bg-blue-600 text-white rounded text-sm"
+        >
+          + Aggiungi budget
+        </button>
+
+        {error && (
+          <div className="text-sm text-red-600 mt-2">
+            {error}
+          </div>
+        )}
       </div>
+
+      {/* MODAL semitrasparente per creazione budget */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
+          <div className="bg-white rounded-lg shadow max-w-sm w-full mx-4 p-4">
+            <h3 className="text-base font-semibold mb-3">
+              Nuovo budget mensile
+            </h3>
+
+            <form onSubmit={handleAdd} className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Categoria</label>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                >
+                  <option value="">Seleziona una categoria</option>
+                  {categories.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {(c.icon || "💼") + " " + c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Limite mensile</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full border rounded px-2 py-1"
+                  value={limit}
+                  onChange={(e) => setLimit(e.target.value)}
+                  placeholder="Es. 500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-3 py-2 text-sm rounded border border-gray-300"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  className="px-3 py-2 text-sm rounded bg-blue-600 text-white"
+                  disabled={loading}
+                >
+                  {loading ? "Salvataggio..." : "Salva budget"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
