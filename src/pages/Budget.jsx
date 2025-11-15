@@ -1,9 +1,10 @@
 // src/pages/Budget.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import { useCategories } from "../context/CategoriesContext";
 import { useTransactions } from "../context/TransactionsContext";
 import { useBudgets } from "../context/BudgetsContext";
 import AddBudgetModal from "../components/AddBudgetModal";
+import { MoreVertical } from "lucide-react";
 
 function safeNumber(v) {
   const n = Number(v);
@@ -23,6 +24,26 @@ export default function Budget() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
 
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRefs = useRef({});
+
+  // chiusura menù a tre puntini cliccando fuori
+  useEffect(() => {
+    function handleClickOutside(e) {
+      const refs = menuRefs.current || {};
+      const clickedInside = Object.values(refs).some(
+        (node) => node && node.contains(e.target)
+      );
+      if (!clickedInside) setOpenMenuId(null);
+    }
+    if (openMenuId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openMenuId]);
+
   const openNewModal = () => {
     setEditingBudget(null);
     setIsModalOpen(true);
@@ -31,6 +52,7 @@ export default function Budget() {
   const openEditModal = (budget) => {
     setEditingBudget(budget);
     setIsModalOpen(true);
+    setOpenMenuId(null);
   };
 
   const closeModal = () => {
@@ -39,10 +61,13 @@ export default function Budget() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm("Eliminare questo budget?")) return;
     try {
       await deleteBudget(id);
     } catch {
       alert("Errore durante l'eliminazione del budget");
+    } finally {
+      setOpenMenuId(null);
     }
   };
 
@@ -125,21 +150,42 @@ export default function Budget() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs">
+
+                  <div
+                    className="relative"
+                    ref={(el) => {
+                      menuRefs.current[b._id] = el;
+                    }}
+                  >
                     <button
                       type="button"
-                      onClick={() => openEditModal(b)}
-                      className="text-blue-600 underline"
+                      className="p-1 rounded-full hover:bg-gray-100"
+                      onClick={() =>
+                        setOpenMenuId((prev) =>
+                          prev === b._id ? null : b._id
+                        )
+                      }
                     >
-                      Modifica
+                      <MoreVertical size={18} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(b._id)}
-                      className="text-red-600 underline"
-                    >
-                      Elimina
-                    </button>
+                    {openMenuId === b._id && (
+                      <div className="absolute right-0 mt-1 bg-white border rounded shadow z-20 min-w-[140px] text-sm">
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100"
+                          onClick={() => openEditModal(b)}
+                        >
+                          Modifica
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100"
+                          onClick={() => handleDelete(b._id)}
+                        >
+                          Elimina
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
