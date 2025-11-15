@@ -10,7 +10,7 @@ function safeNumber(v) {
 
 export default function AddBudgetForm({ onDone, initial }) {
   const { categories } = useCategories();
-  const { createBudget } = useBudgets();
+  const { createBudget, updateBudget } = useBudgets();
 
   const [categoryId, setCategoryId] = useState("");
   const [limit, setLimit] = useState("");
@@ -44,11 +44,19 @@ export default function AddBudgetForm({ onDone, initial }) {
 
     setLoading(true);
     try {
-      await createBudget({
-        category: categoryId,
-        limit: lim,
-        period: "monthly",
-      });
+      if (initial && initial._id) {
+        await updateBudget(initial._id, {
+          category: categoryId,
+          limit: lim,
+          period: "monthly",
+        });
+      } else {
+        await createBudget({
+          category: categoryId,
+          limit: lim,
+          period: "monthly",
+        });
+      }
       onDone?.();
     } catch (err) {
       console.error("Errore salvataggio budget", err);
