@@ -1,17 +1,36 @@
 // src/components/TransactionList.jsx
-import React, { useState, useEffect, useRef } from "react";
-import { useTransactions } from "../context/TransactionsContext";
-import { useCategories } from "../context/CategoriesContext";
-import AddTransactionModal from "./AddTransactionModal";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { MoreVertical } from "lucide-react";
+import { useTransactions } from "../context/TransactionsContext";
+import AddTransactionModal from "./AddTransactionModal";
 
-export default function TransactionList({ items }) {
+function formatEuro(amount) {
+  const n = Number(amount) || 0;
+  const sign = n < 0 ? "-" : "";
+  return `${sign}€ ${Math.abs(n).toFixed(2)}`;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("it-IT");
+}
+
+function getType(amount) {
+  const n = Number(amount) || 0;
+  return n >= 0 ? "entrata" : "uscita";
+}
+
+export default function TransactionList({ transactions = [] }) {
   const { deleteTransaction } = useTransactions();
-  const { categories } = useCategories();
-  const [editing, setEditing] = useState(null);
+
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRefs = useRef({});
+  const [editing, setEditing] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
+  // chiusura menù a tre puntini cliccando fuori
   useEffect(() => {
     function handleClickOutside(e) {
       const refs = menuRefs.current || {};
@@ -28,98 +47,122 @@ export default function TransactionList({ items }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openMenuId]);
 
+  const sortedTransactions = useMemo(() => {
+    // Ordina per data (più recente prima); se manca, lascia l'ordine com'è
+    return [...transactions].sort((a, b) => {
+      if (!a.date || !b.date) return 0;
+      return new Date(b.date) - new Date(a.date);
+    });
+  }, [transactions]);
+
+  const handleEdit = (tx) => {
+    setEditing(tx);
+    setEditModalOpen(true);
+    setOpenMenuId(null);
+  };
+
   const handleDelete = async (tx) => {
-    if (!confirm("Eliminare questa transazione?")) return;
+    if (!window.confirm("Eliminare questa transazione?")) return;
     try {
       await deleteTransaction(tx._id);
-    } catch (e) {
-      console.error("delete error", e);
-      alert("Errore durante l'eliminazione");
+    } catch (err) {
+      console.error("Errore eliminazione transazione", err);
+      alert("Errore durante l'eliminazione della transazione");
     } finally {
       setOpenMenuId(null);
     }
   };
 
-  const handleEdit = (tx) => {
-    setEditing(tx);
-    setOpenMenuId(null);
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditing(null);
   };
 
-  const resolveCategory = (catField) => {
-    if (!catField) return null;
-    if (typeof catField === "object") {
-      if (catField._id || catField.name) return catField;
-      if (catField.$oid) {
-        const found = categories.find((c) => c._id === catField.$oid);
-        return found || null;
-      }
-      return null;
-    }
-    if (typeof catField === "string") {
-      const found = categories.find((c) => c._id === catField);
-      return found || null;
-    }
-    return null;
-  };
+  if (!sortedTransactions.length) {
+    return (
+      <div className="text-sm text-gray-500">
+        Nessuna transazione trovata.
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <ul className="divide-y">
-        {items.map((tx) => {
-          const cat = resolveCategory(tx.category);
+    <>
+      <div className="divide-y">
+        {sortedTransactions.map((t) => {
+          const type = getType(t.amount);
+          const isEntrata = type === "entrata";
+
+          const categoryName =
+            typeof t.category === "object"
+              ? t.category.name
+              : t.categoryName || "";
+          const categoryIcon =
+            typeof t.category === "object"
+              ? t.category.icon
+              : t.categoryIcon || "";
+
           return (
-            <li
-              key={tx._id}
-              className="py-3 flex justify-between items-center gap-3"
+            <div
+              key={t._id}
+              className="py-2 flex justify-between items-center"
             >
-              <div>
-                <div className="text-sm text-gray-600">
-                  {tx.date ? new Date(tx.date).toLocaleDateString() : "-"}
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-lg ${
+                    isEntrata ? "bg-green-100" : "bg-red-100"
+                  }`}
+                >
+                  {categoryIcon || (isEntrata ? "⬆️" : "⬇️")}
                 </div>
-                <div className="font-medium">{tx.description || "—"}</div>
-                <div className="text-xs text-gray-500">
-                  {cat ? cat.name : "—"}
+                <div>
+                  <div className="text-sm font-semibold">
+                    {t.description || "(senza descrizione)"}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatDate(t.date)}
+                    {categoryName ? ` • ${categoryName}` : ""}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <div
-                  className={`${
-                    tx.amount >= 0 ? "text-green-600" : "text-red-600"
-                  } font-semibold text-sm`}
+                  className={`text-sm font-semibold ${
+                    isEntrata ? "text-green-600" : "text-red-600"
+                  }`}
                 >
-                  {Number(tx.amount || 0).toFixed(2)} €
+                  {formatEuro(t.amount)}
                 </div>
 
                 <div
                   className="relative"
                   ref={(el) => {
-                    menuRefs.current[tx._id] = el;
+                    menuRefs.current[t._id] = el;
                   }}
                 >
                   <button
                     type="button"
                     className="p-1 rounded-full hover:bg-gray-100"
                     onClick={() =>
-                      setOpenMenuId((prev) => (prev === tx._id ? null : tx._id))
+                      setOpenMenuId((prev) => (prev === t._id ? null : t._id))
                     }
                   >
                     <MoreVertical size={18} />
                   </button>
-
-                  {openMenuId === tx._id && (
-                    <div className="absolute right-0 mt-1 bg-white border rounded shadow z-20 min-w-[120px] text-sm">
+                  {openMenuId === t._id && (
+                    <div className="absolute right-0 mt-1 bg-white border rounded shadow z-20 min-w-[140px] text-sm">
                       <button
                         type="button"
                         className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                        onClick={() => handleEdit(tx)}
+                        onClick={() => handleEdit(t)}
                       >
                         Modifica
                       </button>
                       <button
                         type="button"
                         className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100"
-                        onClick={() => handleDelete(tx)}
+                        onClick={() => handleDelete(t)}
                       >
                         Elimina
                       </button>
@@ -127,16 +170,17 @@ export default function TransactionList({ items }) {
                   )}
                 </div>
               </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
 
+      {/* Modal per modifica transazione */}
       <AddTransactionModal
-        open={!!editing}
+        open={editModalOpen}
+        onClose={closeEditModal}
         initial={editing}
-        onClose={() => setEditing(null)}
       />
-    </div>
+    </>
   );
 }
