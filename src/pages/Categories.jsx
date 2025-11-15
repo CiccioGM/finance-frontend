@@ -1,11 +1,13 @@
 // src/pages/Categories.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useCategories } from "../context/CategoriesContext";
+import { useBudgets } from "../context/BudgetsContext";
 import { MoreVertical, Plus } from "lucide-react";
 import AddCategoryModal from "../components/AddCategoryModal";
 
 export default function Categories() {
   const { categories, deleteCategory } = useCategories();
+  const { createBudget } = useBudgets();
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -50,6 +52,28 @@ export default function Categories() {
   const handleNew = () => {
     setEditing(null);
     setAddOpen(true);
+  };
+
+  // chiamata dopo il salvataggio di una nuova categoria
+  const handleCategorySaved = async (savedCategory) => {
+    if (!savedCategory || !savedCategory._id) return;
+
+    const wantBudget = window.confirm(
+      "Vuoi creare un budget di € 500,00 per questa nuova categoria?"
+    );
+
+    if (!wantBudget) return;
+
+    try {
+      await createBudget({
+        category: savedCategory._id,
+        limit: 500,
+        period: "monthly",
+      });
+    } catch (e) {
+      console.error("Errore creazione budget automatico:", e);
+      // opzionale: alert("Categoria creata, ma errore nella creazione del budget.");
+    }
   };
 
   return (
@@ -130,6 +154,7 @@ export default function Categories() {
           setEditing(null);
         }}
         initial={editing}
+        onSaved={handleCategorySaved}
       />
     </div>
   );
