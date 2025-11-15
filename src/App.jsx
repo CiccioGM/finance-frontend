@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
+import ScrollToTop from "./components/ScrollToTop";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
@@ -34,36 +35,38 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
-        <Header onNewTransaction={openAddModal} />
+      <ScrollToTop>
+        <div className="min-h-screen bg-gray-50">
+          <Header onNewTransaction={openAddModal} />
 
-        <main className="pt-16 px-4 md:px-8">
-          <Routes>
-            <Route
-              path="/"
-              element={<Dashboard pieLegendPosition={pieLegendPosition} />}
-            />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/budget" element={<Budget />} />
-            <Route
-              path="/settings"
-              element={
-                <Settings
-                  pieLegendPosition={pieLegendPosition}
-                  setPieLegendPosition={setPieLegendPosition}
-                />
-              }
-            />
-            <Route path="/add" element={<AddTransactionPage />} />
-          </Routes>
-        </main>
+          <main className="pt-16 px-4 md:px-8">
+            <Routes>
+              <Route
+                path="/"
+                element={<Dashboard pieLegendPosition={pieLegendPosition} />}
+              />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/budget" element={<Budget />} />
+              <Route
+                path="/settings"
+                element={
+                  <Settings
+                    pieLegendPosition={pieLegendPosition}
+                    setPieLegendPosition={setPieLegendPosition}
+                  />
+                }
+              />
+              <Route path="/add" element={<AddTransactionPage />} />
+            </Routes>
+          </main>
 
-        <AddTransactionModal
-          open={isAddModalOpen}
-          onClose={closeAddModal}
-        />
-      </div>
+          <AddTransactionModal
+            open={isAddModalOpen}
+            onClose={closeAddModal}
+          />
+        </div>
+      </ScrollToTop>
     </BrowserRouter>
   );
 }
