@@ -20,12 +20,12 @@ export default function ExpensePieChart({
     else onActiveChange(id);
   };
 
-  // Dati normalizzati per Recharts, con un campo "id" sicuro
+  // Normalizziamo i dati e aggiungiamo un campo "id" sicuro
   const chartData = useMemo(
     () =>
       (Array.isArray(data) ? data : []).map((item) => ({
         ...item,
-        id: item._id || item.id,
+        id: item._id || item.id, // id di categoria
       })),
     [data]
   );
@@ -47,7 +47,7 @@ export default function ExpensePieChart({
     return <div className="text-sm text-gray-500">Nessun dato disponibile.</div>;
   }
 
-  // BLOCCO GRAFICO: qui gestiamo il click sulla fetta
+  // BLOCCO GRAFICO – qui usiamo SOLO l'indice
   const PieBlock = (
     <ResponsiveContainer>
       <PieChart>
@@ -60,10 +60,12 @@ export default function ExpensePieChart({
           outerRadius={80}
           innerRadius={40}
           paddingAngle={2}
-          onClick={(d) => {
-            // d è l'oggetto evento di Recharts
-            const id = d?.payload?.id;
-            handleToggle(id);
+          // 👇 firma ufficiale: (data, index)
+          onClick={(_, index) => {
+            if (index == null) return;
+            const entry = chartData[index];
+            if (!entry || !entry.id) return;
+            handleToggle(entry.id);
           }}
         >
           {chartData.map((entry) => {
@@ -83,7 +85,7 @@ export default function ExpensePieChart({
     </ResponsiveContainer>
   );
 
-  // BLOCCO LEGENDA: stessa logica di filtro
+  // BLOCCO LEGENDA – già funzionava, lo lasciamo uguale
   const LegendBlock = (
     <div className="w-full space-y-1">
       {chartData.map((entry) => {
@@ -124,7 +126,10 @@ export default function ExpensePieChart({
   // DESKTOP: legenda a destra
   if (isSide) {
     return (
-      <div className="flex flex-row gap-3 w-full">
+      <div
+        className="flex flex-row gap-3 w-full"
+        style={{ overflow: "hidden", pointerEvents: "auto" }}
+      >
         <div className="w-[45%] h-56 md:h-64">{PieBlock}</div>
         <div className="w-[55%]">{LegendBlock}</div>
       </div>
@@ -133,7 +138,10 @@ export default function ExpensePieChart({
 
   // MOBILE: legenda sotto
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div
+      className="flex flex-col gap-3 w-full"
+      style={{ overflow: "hidden", pointerEvents: "auto" }}
+    >
       <div className="w-full h-56 md:h-64">{PieBlock}</div>
       <div className="w-full">{LegendBlock}</div>
     </div>
