@@ -1,10 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, {
-  useMemo,
-  useState,
-  useRef,
-  useEffect,
-} from "react";
+import React, { useMemo, useState } from "react";
 import { useTransactions } from "../context/TransactionsContext";
 import { useCategories } from "../context/CategoriesContext";
 import MonthlyBarChart from "../components/MonthlyBarChart";
@@ -48,23 +43,8 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
   const [activeCategoryId, setActiveCategoryId] = useState(null);
-  const pieWrapperRef = useRef(null);
 
-  // click fuori dal blocco grafico → rimuove filtro
-  useEffect(() => {
-    if (!activeCategoryId) return;
-
-    function handleClick(e) {
-      if (!pieWrapperRef.current) return;
-      if (!pieWrapperRef.current.contains(e.target)) {
-        setActiveCategoryId(null);
-      }
-    }
-
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, [activeCategoryId]);
-
+  // Tutta la Dashboard si basa su filteredTransactions
   const filteredTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
     if (!activeCategoryId) return transactions;
@@ -143,6 +123,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
     }));
   }, [filteredTransactions]);
 
+  // Dati per grafico a torta: sempre basato su TUTTE le uscite ultimi 30gg
   const pieData = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
 
@@ -189,6 +170,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
     return arr;
   }, [transactions, categories]);
 
+  // Ultime transazioni → ordinate per DATA (non per createdAt)
   const latest = useMemo(() => {
     if (!Array.isArray(filteredTransactions)) return [];
     return [...filteredTransactions]
@@ -202,6 +184,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
+      {/* SALDO / ENTRATE / USCITE */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-white p-3 md:p-4 rounded shadow">
           <div className="text-xs md:text-sm text-gray-500">Saldo</div>
@@ -227,12 +210,14 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
         </div>
       </div>
 
+      {/* GRAFICO BARRE */}
       <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-3">Andamento ultimi 12 mesi</h3>
         <MonthlyBarChart data={monthlyData} />
       </div>
 
-      <div ref={pieWrapperRef} className="bg-white p-4 rounded shadow">
+      {/* GRAFICO A TORTA + LEGENDA CONTROLLER DEL FILTRO */}
+      <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-3">
           Suddivisione uscite (ultimi 30gg)
         </h3>
@@ -244,6 +229,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
         />
       </div>
 
+      {/* ULTIME TRANSAZIONI (filtrate dalla stessa logica) */}
       <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-3">Ultime transazioni</h3>
         <TransactionList items={latest} />
