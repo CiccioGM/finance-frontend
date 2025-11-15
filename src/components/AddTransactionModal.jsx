@@ -1,11 +1,12 @@
 // src/components/AddTransactionModal.jsx
 import React from "react";
+import { createPortal } from "react-dom";
 import AddTransactionForm from "./AddTransactionForm";
 
 export default function AddTransactionModal({ open, onClose, initial }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
       onClick={onClose}
@@ -23,6 +24,7 @@ export default function AddTransactionModal({ open, onClose, initial }) {
         </button>
         <AddTransactionForm onDone={onClose} initial={initial} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
