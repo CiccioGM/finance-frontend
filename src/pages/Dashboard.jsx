@@ -41,6 +41,12 @@ function resolveCategory(categories, catField) {
   return null;
 }
 
+function getRatioColorClass(ratio) {
+  if (ratio < 0.8) return "text-green-600";
+  if (ratio < 1) return "text-orange-500";
+  return "text-red-600";
+}
+
 export default function Dashboard({ pieLegendPosition = "side" }) {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
@@ -310,8 +316,10 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
                 <div className="flex justify-between text-sm mb-1">
                   <span className="font-semibold">{b.categoryName}</span>
                   <span>
-                    {formatEuro(b.spent)} / {formatEuro(b.limit)} (
-                    {b.ratioPct}%)
+                    {formatEuro(b.spent)} / {formatEuro(b.limit)}{" "}
+                    <span className={getRatioColorClass(b.ratio)}>
+                      ({b.ratioPct}%)
+                    </span>
                   </span>
                 </div>
                 <div className="w-full h-2 bg-gray-200 rounded">
@@ -320,7 +328,7 @@ export default function Dashboard({ pieLegendPosition = "side" }) {
                       b.ratio < 0.8
                         ? "bg-green-500"
                         : b.ratio < 1
-                        ? "bg-yellow-500"
+                        ? "bg-orange-400"
                         : "bg-red-500"
                     }`}
                     style={{ width: `${b.ratio * 100}%` }}
