@@ -29,6 +29,20 @@ function ScrollToTop() {
 function AppShell() {
   const [newTxOpen, setNewTxOpen] = useState(false);
 
+  const [pieLegendPosition, setPieLegendPosition] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("pieLegendPosition") || "side";
+    }
+    return "side";
+  });
+
+  const [exportFormat, setExportFormat] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("reportsExportFormat") || "pdf";
+    }
+    return "pdf";
+  });
+
   const handleNewTransaction = () => {
     setNewTxOpen(true);
   };
@@ -43,12 +57,28 @@ function AppShell() {
       <ScrollToTop />
       <main className="pt-16 px-4 pb-6 bg-gray-100 min-h-screen">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route
+            path="/"
+            element={<Dashboard pieLegendPosition={pieLegendPosition} />}
+          />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/budget" element={<Budget />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/reports"
+            element={<Reports exportFormat={exportFormat} />}
+          />
+          <Route
+            path="/settings"
+            element={
+              <Settings
+                pieLegendPosition={pieLegendPosition}
+                setPieLegendPosition={setPieLegendPosition}
+                exportFormat={exportFormat}
+                setExportFormat={setExportFormat}
+              />
+            }
+          />
         </Routes>
       </main>
 
