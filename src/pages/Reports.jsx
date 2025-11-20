@@ -144,7 +144,7 @@ export default function Reports() {
         formatDisplayDate(t.date),
         tipo,
         t.description || "",
-        catName,
+        catName,                // SOLO nome nel PDF
         formatEuro(t.amount),
       ];
     });
@@ -325,7 +325,7 @@ export default function Reports() {
                         {t.description || ""}
                       </td>
                       <td className="py-1 pr-2">
-                        {cat ? cat.name : ""}
+                        {cat ? `${cat.icon || ""} ${cat.name}` : ""}
                       </td>
                       <td
                         className={`py-1 pl-2 text-right ${
