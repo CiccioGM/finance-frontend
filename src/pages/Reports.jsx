@@ -89,8 +89,8 @@ export default function Reports({ exportFormat = "pdf" }) {
   );
   const [toDate, setToDate] = useState(toInputDate(now.toISOString()));
 
-  // nuovo filtro categoria: "" = <Tutte>
-  const [categoryFilter, setCategoryFilter] = useState("");
+  // filtro categoria: array di id selezionati, [] = <Tutte>
+  const [categoryFilter, setCategoryFilter] = useState([]);
 
   const filtered = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
@@ -111,10 +111,11 @@ export default function Reports({ exportFormat = "pdf" }) {
         if (d > end) return false;
       }
 
-      // filtro per categoria (se diverso da "<tutte>")
-      if (categoryFilter) {
+      // filtro per categoria: se ci sono categorie selezionate, il catId deve essere in quell'elenco
+      if (categoryFilter.length > 0) {
         const cat = resolveCategory(categories, t.category);
-        if (!cat || cat._id !== categoryFilter) return false;
+        const catId = cat?._id;
+        if (!catId || !categoryFilter.includes(catId)) return false;
       }
 
       return true;
@@ -138,8 +139,8 @@ export default function Reports({ exportFormat = "pdf" }) {
 
   const downloadCsv = (baseName) => {
     const rows = [];
-    // intestazione
-    rows.push("Data;Tipo;Descrizione;Categoria;Importo");
+    // intestazione (Categoria prima della descrizione)
+    rows.push("Data;Tipo;Categoria;Descrizione;Importo");
 
     filtered.forEach((t) => {
       const cat = resolveCategory(categories, t.category);
@@ -149,8 +150,8 @@ export default function Reports({ exportFormat = "pdf" }) {
       const row = [
         formatDisplayDate(t.date),
         tipo,
-        (t.description || "").replace(/;/g, ","),
         (catName || "").replace(/;/g, ","),
+        (t.description || "").replace(/;/g, ","),
         formatEuro(t.amount),
       ].join(";");
       rows.push(row);
@@ -207,18 +208,26 @@ export default function Reports({ exportFormat = "pdf" }) {
         }
       }
 
-      // se filtrato per categoria, aggiungo info
-      if (categoryFilter) {
-        const cat = categories.find((c) => c._id === categoryFilter);
-        if (cat) {
-          subtitle += ` – Categoria: ${cat.name}`;
+      // se ci sono categorie filtrate, aggiungo info
+      if (categoryFilter.length > 0) {
+        const selectedCats = categories.filter((c) =>
+          categoryFilter.includes(c._id)
+        );
+        if (selectedCats.length === 1) {
+          subtitle += ` – Categoria: ${selectedCats[0].name}`;
+        } else if (selectedCats.length > 1) {
+          const names = selectedCats.map((c) => c.name).join(", ");
+          // se troppo lungo lo tronco un po'
+          const short =
+            names.length > 40 ? names.slice(0, 37) + "..." : names;
+          subtitle += ` – Categorie: ${short}`;
         }
       }
 
       doc.setFontSize(12);
       doc.text(subtitle, 14, 26);
 
-      // tabella con le transazioni (Data, Tipo, Descrizione, Categoria, Importo)
+      // tabella con le transazioni (Data, Tipo, Categoria, Descrizione, Importo)
       const tableBody = filtered.map((t) => {
         const cat = resolveCategory(categories, t.category);
         const catName = cat?.name || "";
@@ -227,15 +236,15 @@ export default function Reports({ exportFormat = "pdf" }) {
         return [
           formatDisplayDate(t.date),
           tipo,
-          t.description || "",
           catName,
+          t.description || "",
           formatEuro(t.amount),
         ];
       });
 
       autoTable(doc, {
         startY: 34,
-        head: [["Data", "Tipo", "Descrizione", "Categoria", "Importo"]],
+        head: [["Data", "Tipo", "Categoria", "Descrizione", "Importo"]],
         body: tableBody,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [33, 150, 243] },
@@ -304,6 +313,19 @@ export default function Reports({ exportFormat = "pdf" }) {
       ? "CSV"
       : "Excel";
 
+  // handler per multi-select categorie
+  const handleCategoryChange = (e) => {
+    const values = Array.from(e.target.selectedOptions).map(
+      (o) => o.value
+    );
+    // se l'utente non seleziona nulla o seleziona "ALL", consideriamo <Tutte>
+    if (values.length === 0 || values.includes("__ALL__")) {
+      setCategoryFilter([]);
+    } else {
+      setCategoryFilter(values);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
       <div className="bg-white p-4 rounded shadow space-y-4">
@@ -330,21 +352,28 @@ export default function Reports({ exportFormat = "pdf" }) {
             />
           </div>
 
-          {/* Nuovo filtro categoria */}
+          {/* Filtro categoria multiplo */}
           <div>
             <label className="block text-sm mb-1">Categoria</label>
             <select
               className="w-full border rounded px-2 py-1 text-sm"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              multiple
+              size={Math.min(5, (categories?.length || 0) + 1)}
+              value={
+                categoryFilter.length === 0 ? ["__ALL__"] : categoryFilter
+              }
+              onChange={handleCategoryChange}
             >
-              <option value="">{`<Tutte>`}</option>
+              <option value="__ALL__">{`<Tutte>`}</option>
               {categories.map((c) => (
                 <option key={c._id} value={c._id}>
                   {c.icon ? `${c.icon} ${c.name}` : c.name}
                 </option>
               ))}
             </select>
+            <p className="text-[10px] text-gray-500 mt-1">
+              Tieni premuto Ctrl (o ⌘ su Mac) per selezionare più categorie.
+            </p>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -354,7 +383,7 @@ export default function Reports({ exportFormat = "pdf" }) {
               onClick={() => {
                 setFromDate("");
                 setToDate("");
-                setCategoryFilter("");
+                setCategoryFilter([]);
               }}
             >
               Annulla filtro
@@ -408,8 +437,8 @@ export default function Reports({ exportFormat = "pdf" }) {
                 <tr className="border-b">
                   <th className="text-left py-2 pr-2">Data</th>
                   <th className="text-left py-2 pr-2">Tipo</th>
-                  <th className="text-left py-2 pr-2">Descrizione</th>
                   <th className="text-left py-2 pr-2">Categoria</th>
+                  <th className="text-left py-2 pr-2">Descrizione</th>
                   <th className="text-right py-2 pl-2">Importo</th>
                 </tr>
               </thead>
@@ -431,10 +460,10 @@ export default function Reports({ exportFormat = "pdf" }) {
                         {tipo}
                       </td>
                       <td className="py-1 pr-2">
-                        {t.description || ""}
+                        {cat ? `${cat.icon || ""} ${cat.name}` : ""}
                       </td>
                       <td className="py-1 pr-2">
-                        {cat ? `${cat.icon || ""} ${cat.name}` : ""}
+                        {t.description || ""}
                       </td>
                       <td
                         className={`py-1 pl-2 text-right ${
