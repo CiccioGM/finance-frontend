@@ -38,6 +38,7 @@ function formatDateForPdf(iso) {
   return `${d}/${m}/${y}`;
 }
 
+// per nome file: data inizio GG-MM
 function formatStartLabel(dateStr) {
   if (!dateStr) return "tutti";
   const d = new Date(dateStr);
@@ -47,13 +48,14 @@ function formatStartLabel(dateStr) {
   return `${day}-${month}`;
 }
 
+// per nome file: data fine GG-MM-AA
 function formatEndLabel(dateStr) {
   if (!dateStr) return "tutti";
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return "tutti";
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = String(d.getFullYear()).slice(2); // ultimi 2 numeri
+  const year = String(d.getFullYear()).slice(2);
   return `${day}-${month}-${year}`;
 }
 
@@ -87,6 +89,9 @@ export default function Reports({ exportFormat = "pdf" }) {
   );
   const [toDate, setToDate] = useState(toInputDate(now.toISOString()));
 
+  // nuovo filtro categoria: "" = <Tutte>
+  const [categoryFilter, setCategoryFilter] = useState("");
+
   const filtered = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
 
@@ -98,15 +103,23 @@ export default function Reports({ exportFormat = "pdf" }) {
       const d = new Date(t.date);
       if (Number.isNaN(d.getTime())) return false;
 
+      // filtro per date
       if (from && d < from) return false;
       if (to) {
         const end = new Date(to);
         end.setHours(23, 59, 59, 999);
         if (d > end) return false;
       }
+
+      // filtro per categoria (se diverso da "<tutte>")
+      if (categoryFilter) {
+        const cat = resolveCategory(categories, t.category);
+        if (!cat || cat._id !== categoryFilter) return false;
+      }
+
       return true;
     });
-  }, [transactions, fromDate, toDate]);
+  }, [transactions, fromDate, toDate, categoryFilter, categories]);
 
   const summary = useMemo(() => {
     let entrate = 0;
@@ -151,7 +164,6 @@ export default function Reports({ exportFormat = "pdf" }) {
     const link = document.createElement("a");
     link.href = url;
 
-    // per Excel uso comunque CSV ma nome diverso
     const ext =
       exportFormat === "excel" ? "_excel.csv" : "_csv.csv";
 
@@ -194,6 +206,15 @@ export default function Reports({ exportFormat = "pdf" }) {
           subtitle += fromText ? ` al ${toText}` : `fino al ${toText}`;
         }
       }
+
+      // se filtrato per categoria, aggiungo info
+      if (categoryFilter) {
+        const cat = categories.find((c) => c._id === categoryFilter);
+        if (cat) {
+          subtitle += ` – Categoria: ${cat.name}`;
+        }
+      }
+
       doc.setFontSize(12);
       doc.text(subtitle, 14, 26);
 
@@ -288,8 +309,8 @@ export default function Reports({ exportFormat = "pdf" }) {
       <div className="bg-white p-4 rounded shadow space-y-4">
         <h2 className="text-lg font-semibold">Resoconti</h2>
 
-        {/* Filtri data */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        {/* Filtri data + categoria */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div>
             <label className="block text-sm mb-1">Dal</label>
             <input
@@ -308,6 +329,24 @@ export default function Reports({ exportFormat = "pdf" }) {
               onChange={(e) => setToDate(e.target.value)}
             />
           </div>
+
+          {/* Nuovo filtro categoria */}
+          <div>
+            <label className="block text-sm mb-1">Categoria</label>
+            <select
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="">{`<Tutte>`}</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.icon ? `${c.icon} ${c.name}` : c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex flex-col gap-1">
             <button
               type="button"
@@ -315,6 +354,7 @@ export default function Reports({ exportFormat = "pdf" }) {
               onClick={() => {
                 setFromDate("");
                 setToDate("");
+                setCategoryFilter("");
               }}
             >
               Annulla filtro
