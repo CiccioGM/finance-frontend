@@ -134,12 +134,15 @@ export default function Reports() {
     doc.setFontSize(12);
     doc.text(subtitle, 14, 26);
 
-    // tabella con le transazioni
+    // tabella con le transazioni (Data, Tipo, Descrizione, Categoria, Importo)
     const tableBody = filtered.map((t) => {
       const cat = resolveCategory(categories, t.category);
       const catName = cat?.name || "";
+      const isEntrata = safeNumber(t.amount) >= 0;
+      const tipo = isEntrata ? "Entrata" : "Uscita";
       return [
         formatDisplayDate(t.date),
+        tipo,
         t.description || "",
         catName,
         formatEuro(t.amount),
@@ -148,12 +151,22 @@ export default function Reports() {
 
     autoTable(doc, {
       startY: 34,
-      head: [["Data", "Descrizione", "Categoria", "Importo"]],
+      head: [["Data", "Tipo", "Descrizione", "Categoria", "Importo"]],
       body: tableBody,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [33, 150, 243] },
       columnStyles: {
-        3: { halign: "right" }, // colonna Importo allineata a destra
+        4: { halign: "right" }, // colonna Importo allineata a destra
+      },
+      didParseCell: (data) => {
+        // colonna Importo (index 4): entrate verdi, uscite rosse
+        if (data.section === "body" && data.column.index === 4) {
+          const rawAmount = filtered[data.row.index]?.amount;
+          const isEntrata = safeNumber(rawAmount) >= 0;
+          data.cell.styles.textColor = isEntrata
+            ? [34, 197, 94] // verde
+            : [220, 38, 38]; // rosso
+        }
       },
     });
 
@@ -163,6 +176,9 @@ export default function Reports() {
     let y = lastY + 8;
 
     doc.setFontSize(11);
+
+    // Entrate in verde
+    doc.setTextColor(34, 197, 94);
     doc.text(
       `Entrate: ${formatEuro(summary.entrate)}`,
       rightX,
@@ -170,6 +186,9 @@ export default function Reports() {
       { align: "right" }
     );
     y += 6;
+
+    // Uscite in rosso
+    doc.setTextColor(220, 38, 38);
     doc.text(
       `Uscite: ${formatEuro(summary.uscite)}`,
       rightX,
@@ -177,6 +196,9 @@ export default function Reports() {
       { align: "right" }
     );
     y += 6;
+
+    // Saldo in nero
+    doc.setTextColor(0, 0, 0);
     doc.text(
       `Saldo: ${formatEuro(summary.saldo)}`,
       rightX,
@@ -184,7 +206,12 @@ export default function Reports() {
       { align: "right" }
     );
 
-    doc.save("resoconto.pdf");
+    // Nome file: resoconto+data inizio+data fine
+    const startLabel = fromDate || "tutti";
+    const endLabel = toDate || "tutti";
+    const filename = `resoconto_${startLabel}_${endLabel}.pdf`;
+
+    doc.save(filename);
   };
 
   return (
@@ -233,17 +260,17 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Riepilogo a schermo (questo resta com'è, è solo UI, non PDF) */}
+        {/* Riepilogo a schermo */}
         <div className="grid grid-cols-3 gap-2 md:gap-4 mt-4">
           <div className="bg-gray-50 p-3 rounded">
             <div className="text-xs text-gray-500">Entrate</div>
-            <div className="text-sm md:text-lg font-semibold">
+            <div className="text-sm md:text-lg font-semibold text-green-600">
               {formatEuro(summary.entrate)}
             </div>
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div className="text-xs text-gray-500">Uscite</div>
-            <div className="text-sm md:text-lg font-semibold">
+            <div className="text-sm md:text-lg font-semibold text-red-600">
               {formatEuro(-summary.uscite)}
             </div>
           </div>
@@ -271,6 +298,7 @@ export default function Reports() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-2 pr-2">Data</th>
+                  <th className="text-left py-2 pr-2">Tipo</th>
                   <th className="text-left py-2 pr-2">Descrizione</th>
                   <th className="text-left py-2 pr-2">Categoria</th>
                   <th className="text-right py-2 pl-2">Importo</th>
@@ -280,12 +308,22 @@ export default function Reports() {
                 {filtered.map((t) => {
                   const cat = resolveCategory(categories, t.category);
                   const isEntrata = safeNumber(t.amount) >= 0;
+                  const tipo = isEntrata ? "Entrata" : "Uscita";
                   return (
                     <tr key={t._id} className="border-b last:border-0">
                       <td className="py-1 pr-2">
                         {formatDisplayDate(t.date)}
                       </td>
-                      <td className="py-1 pr-2">{t.description || ""}</td>
+                      <td
+                        className={`py-1 pr-2 ${
+                          isEntrata ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {tipo}
+                      </td>
+                      <td className="py-1 pr-2">
+                        {t.description || ""}
+                      </td>
                       <td className="py-1 pr-2">
                         {cat ? cat.name : ""}
                       </td>
