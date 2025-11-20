@@ -1,72 +1,76 @@
 // src/App.jsx
-import React, { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import Header from "./components/Header";
-import ScrollToTop from "./components/ScrollToTop";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
 import Budget from "./pages/Budget";
-import AddTransactionPage from "./pages/AddTransactionPage";
+import Reports from "./pages/Reports";
 import AddTransactionModal from "./components/AddTransactionModal";
+import { TransactionsProvider } from "./context/TransactionsContext";
+import { CategoriesProvider } from "./context/CategoriesContext";
+import { BudgetsProvider } from "./context/BudgetsContext";
 
-export default function App() {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [pieLegendPosition, setPieLegendPosition] = useState("side");
-
-  const openAddModal = () => setIsAddModalOpen(true);
-  const closeAddModal = () => setIsAddModalOpen(false);
-
+function ScrollToTop() {
+  const location = useLocation();
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem("pieLegendPosition");
-    if (saved === "bottom" || saved === "side") {
-      setPieLegendPosition(saved);
-    } else {
-      const width = window.innerWidth || 0;
-      if (width < 768) {
-        setPieLegendPosition("bottom");
-      } else {
-        setPieLegendPosition("side");
-      }
-    }
-  }, []);
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
+function AppShell() {
+  const [newTxOpen, setNewTxOpen] = useState(false);
+
+  const handleNewTransaction = () => {
+    setNewTxOpen(true);
+  };
+
+  const closeNewTransaction = () => {
+    setNewTxOpen(false);
+  };
 
   return (
-    <BrowserRouter>
-      <ScrollToTop>
-        <div className="min-h-screen bg-gray-50">
-          <Header onNewTransaction={openAddModal} />
+    <>
+      <Header onNewTransaction={handleNewTransaction} />
+      <ScrollToTop />
+      <main className="pt-16 px-4 pb-6 bg-gray-100 min-h-screen">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/budget" element={<Budget />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </main>
 
-          <main className="pt-16 px-4 md:px-8">
-            <Routes>
-              <Route
-                path="/"
-                element={<Dashboard pieLegendPosition={pieLegendPosition} />}
-              />
-              <Route path="/transactions" element={<Transactions />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/budget" element={<Budget />} />
-              <Route
-                path="/settings"
-                element={
-                  <Settings
-                    pieLegendPosition={pieLegendPosition}
-                    setPieLegendPosition={setPieLegendPosition}
-                  />
-                }
-              />
-              <Route path="/add" element={<AddTransactionPage />} />
-            </Routes>
-          </main>
+      <AddTransactionModal
+        open={newTxOpen}
+        onClose={closeNewTransaction}
+        initial={null}
+      />
+    </>
+  );
+}
 
-          <AddTransactionModal
-            open={isAddModalOpen}
-            onClose={closeAddModal}
-          />
-        </div>
-      </ScrollToTop>
-    </BrowserRouter>
+export default function App() {
+  return (
+    <TransactionsProvider>
+      <CategoriesProvider>
+        <BudgetsProvider>
+          <Router>
+            <AppShell />
+          </Router>
+        </BudgetsProvider>
+      </CategoriesProvider>
+    </TransactionsProvider>
   );
 }
