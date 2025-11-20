@@ -89,7 +89,7 @@ export default function Reports({ exportFormat = "pdf" }) {
   );
   const [toDate, setToDate] = useState(toInputDate(now.toISOString()));
 
-  // filtro categoria: array di id selezionati, [] = <Tutte>
+  // filtro categoria: array di id selezionati, [] = tutte le categorie
   const [categoryFilter, setCategoryFilter] = useState([]);
 
   const filtered = useMemo(() => {
@@ -217,7 +217,6 @@ export default function Reports({ exportFormat = "pdf" }) {
           subtitle += ` – Categoria: ${selectedCats[0].name}`;
         } else if (selectedCats.length > 1) {
           const names = selectedCats.map((c) => c.name).join(", ");
-          // se troppo lungo lo tronco un po'
           const short =
             names.length > 40 ? names.slice(0, 37) + "..." : names;
           subtitle += ` – Categorie: ${short}`;
@@ -313,17 +312,11 @@ export default function Reports({ exportFormat = "pdf" }) {
       ? "CSV"
       : "Excel";
 
-  // handler per multi-select categorie
-  const handleCategoryChange = (e) => {
-    const values = Array.from(e.target.selectedOptions).map(
-      (o) => o.value
+  // toggle singola categoria (checkbox)
+  const toggleCategory = (id) => {
+    setCategoryFilter((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
-    // se l'utente non seleziona nulla o seleziona "ALL", consideriamo <Tutte>
-    if (values.length === 0 || values.includes("__ALL__")) {
-      setCategoryFilter([]);
-    } else {
-      setCategoryFilter(values);
-    }
   };
 
   return (
@@ -332,7 +325,7 @@ export default function Reports({ exportFormat = "pdf" }) {
         <h2 className="text-lg font-semibold">Resoconti</h2>
 
         {/* Filtri data + categoria */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
           <div>
             <label className="block text-sm mb-1">Dal</label>
             <input
@@ -352,28 +345,42 @@ export default function Reports({ exportFormat = "pdf" }) {
             />
           </div>
 
-          {/* Filtro categoria multiplo */}
+          {/* Filtro categoria a checkbox (funziona su PC e smartphone) */}
           <div>
             <label className="block text-sm mb-1">Categoria</label>
-            <select
-              className="w-full border rounded px-2 py-1 text-sm"
-              multiple
-              size={Math.min(5, (categories?.length || 0) + 1)}
-              value={
-                categoryFilter.length === 0 ? ["__ALL__"] : categoryFilter
-              }
-              onChange={handleCategoryChange}
-            >
-              <option value="__ALL__">{`<Tutte>`}</option>
+            <div className="border rounded px-2 py-2 bg-white max-h-40 overflow-y-auto space-y-1">
+              <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
+                <span>
+                  {categoryFilter.length === 0
+                    ? "Tutte le categorie"
+                    : `${categoryFilter.length} categoria/e selezionate`}
+                </span>
+                {categoryFilter.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-blue-600 underline"
+                    onClick={() => setCategoryFilter([])}
+                  >
+                    Seleziona tutte
+                  </button>
+                )}
+              </div>
               {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.icon ? `${c.icon} ${c.name}` : c.name}
-                </option>
+                <label
+                  key={c._id}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={categoryFilter.includes(c._id)}
+                    onChange={() => toggleCategory(c._id)}
+                  />
+                  <span>
+                    {c.icon ? `${c.icon} ${c.name}` : c.name}
+                  </span>
+                </label>
               ))}
-            </select>
-            <p className="text-[10px] text-gray-500 mt-1">
-              Tieni premuto Ctrl (o ⌘ su Mac) per selezionare più categorie.
-            </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -460,7 +467,9 @@ export default function Reports({ exportFormat = "pdf" }) {
                         {tipo}
                       </td>
                       <td className="py-1 pr-2">
-                        {cat ? `${cat.icon || ""} ${cat.name}` : ""}
+                        {cat ? `${c
+                          ? cat.icon || ""
+                          : ""} ${cat ? cat.name : ""}`.trim() : ""}
                       </td>
                       <td className="py-1 pr-2">
                         {t.description || ""}
