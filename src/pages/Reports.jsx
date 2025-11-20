@@ -30,6 +30,14 @@ function formatDisplayDate(value) {
   return d.toLocaleDateString("it-IT");
 }
 
+function formatDateForPdf(iso) {
+  if (!iso) return "";
+  const parts = iso.split("-");
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+
 function resolveCategory(categories, catField) {
   if (!catField) return null;
   if (typeof catField === "object") {
@@ -103,52 +111,78 @@ export default function Reports() {
     }
 
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const rightX = pageWidth - 14;
 
-    const title = "Resoconto finanziario";
-    doc.setFontSize(16);
-    doc.text(title, 14, 18);
+    // Titolo app
+    doc.setFontSize(18);
+    doc.text("Gestione Finanze", 14, 18);
 
-    let periodText = "Periodo: ";
-    if (fromDate) periodText += `dal ${fromDate}`;
-    if (toDate) periodText += fromDate ? ` al ${toDate}` : `fino al ${toDate}`;
-    if (!fromDate && !toDate) periodText += "tutti i dati";
+    // Sottotitolo: Resoconto finanziario dal ... al ...
+    const fromText = formatDateForPdf(fromDate);
+    const toText = formatDateForPdf(toDate);
+    let subtitle = "Resoconto finanziario";
+    if (fromText || toText) {
+      subtitle += " ";
+      if (fromText) {
+        subtitle += `dal ${fromText}`;
+      }
+      if (toText) {
+        subtitle += fromText ? ` al ${toText}` : `fino al ${toText}`;
+      }
+    }
+    doc.setFontSize(12);
+    doc.text(subtitle, 14, 26);
 
-    doc.setFontSize(11);
-    doc.text(periodText, 14, 26);
-
-    doc.text(
-      `Entrate: ${formatEuro(summary.entrate)}`,
-      14,
-      36
-    );
-    doc.text(
-      `Uscite: ${formatEuro(summary.uscite)}`,
-      14,
-      42
-    );
-    doc.text(
-      `Saldo: ${formatEuro(summary.saldo)}`,
-      14,
-      48
-    );
-
+    // tabella con le transazioni
     const tableBody = filtered.map((t) => {
       const cat = resolveCategory(categories, t.category);
+      const catName = cat?.name || "";
       return [
         formatDisplayDate(t.date),
         t.description || "",
-        cat ? `${cat.icon || ""} ${cat.name}` : "",
+        catName,
         formatEuro(t.amount),
       ];
     });
 
     autoTable(doc, {
-      startY: 56,
+      startY: 34,
       head: [["Data", "Descrizione", "Categoria", "Importo"]],
       body: tableBody,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [33, 150, 243] },
+      columnStyles: {
+        3: { halign: "right" }, // colonna Importo allineata a destra
+      },
     });
+
+    // Resoconto (Entrate / Uscite / Saldo) SOTTO la tabella, a destra
+    const lastY =
+      (doc.lastAutoTable && doc.lastAutoTable.finalY) || 34;
+    let y = lastY + 8;
+
+    doc.setFontSize(11);
+    doc.text(
+      `Entrate: ${formatEuro(summary.entrate)}`,
+      rightX,
+      y,
+      { align: "right" }
+    );
+    y += 6;
+    doc.text(
+      `Uscite: ${formatEuro(summary.uscite)}`,
+      rightX,
+      y,
+      { align: "right" }
+    );
+    y += 6;
+    doc.text(
+      `Saldo: ${formatEuro(summary.saldo)}`,
+      rightX,
+      y,
+      { align: "right" }
+    );
 
     doc.save("resoconto.pdf");
   };
@@ -199,7 +233,7 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Riepilogo */}
+        {/* Riepilogo a schermo (questo resta com'è, è solo UI, non PDF) */}
         <div className="grid grid-cols-3 gap-2 md:gap-4 mt-4">
           <div className="bg-gray-50 p-3 rounded">
             <div className="text-xs text-gray-500">Entrate</div>
@@ -222,7 +256,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Elenco transazioni filtrate */}
+      {/* Elenco transazioni filtrate a schermo */}
       <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-3">
           Transazioni nel periodo ({filtered.length})
@@ -253,7 +287,7 @@ export default function Reports() {
                       </td>
                       <td className="py-1 pr-2">{t.description || ""}</td>
                       <td className="py-1 pr-2">
-                        {cat ? `${cat.icon || ""} ${cat.name}` : ""}
+                        {cat ? cat.name : ""}
                       </td>
                       <td
                         className={`py-1 pl-2 text-right ${
