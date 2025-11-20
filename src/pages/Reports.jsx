@@ -206,12 +206,29 @@ export default function Reports() {
       { align: "right" }
     );
 
-    // Nome file: resoconto+data inizio+data fine
-    const startLabel = fromDate || "tutti";
-    const endLabel = toDate || "tutti";
-    const filename = `resoconto_${startLabel}_${endLabel}.pdf`;
+// --- FORMATTAZIONE DATE PER IL NOME FILE ---
+function formatStartLabel(dateStr) {
+  if (!dateStr) return "tutti";
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}`;
+}
 
-    doc.save(filename);
+function formatEndLabel(dateStr) {
+  if (!dateStr) return "tutti";
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear()).slice(2); // ultimi 2 numeri
+  return `${day}-${month}-${year}`;
+}
+
+const startLabel = formatStartLabel(fromDate);
+const endLabel = formatEndLabel(toDate);
+
+const filename = `resoconto_${startLabel}_${endLabel}.pdf`;
+doc.save(filename);
   };
 
   return (
