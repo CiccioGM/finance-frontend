@@ -81,6 +81,12 @@ export default function Header({ onNewTransaction }) {
                   Budget
                 </Link>
                 <Link
+                  to="/reports"
+                  className="block px-4 py-2 hover:bg-gray-100"
+                >
+                  Resoconti
+                </Link>
+                <Link
                   to="/settings"
                   className="block px-4 py-2 hover:bg-gray-100"
                 >
