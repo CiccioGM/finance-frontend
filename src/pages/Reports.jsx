@@ -2,8 +2,8 @@
 import React, { useMemo, useState } from "react";
 import { useTransactions } from "../context/TransactionsContext";
 import { useCategories } from "../context/CategoriesContext";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function safeNumber(v) {
   const n = Number(v);
@@ -49,7 +49,7 @@ export default function Reports() {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
 
-  // di default: ultimi 30 giorni
+  // default: ultimi 30 giorni
   const now = new Date();
   const thirtyDaysAgo = new Date(
     now.getTime() - 30 * 24 * 60 * 60 * 1000
@@ -132,7 +132,6 @@ export default function Reports() {
       48
     );
 
-    // tabella con le transazioni
     const tableBody = filtered.map((t) => {
       const cat = resolveCategory(categories, t.category);
       return [
@@ -143,7 +142,7 @@ export default function Reports() {
       ];
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 56,
       head: [["Data", "Descrizione", "Categoria", "Importo"]],
       body: tableBody,
