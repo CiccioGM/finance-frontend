@@ -467,9 +467,9 @@ export default function Reports({ exportFormat = "pdf" }) {
                         {tipo}
                       </td>
                       <td className="py-1 pr-2">
-                        {cat ? `${c
-                          ? cat.icon || ""
-                          : ""} ${cat ? cat.name : ""}`.trim() : ""}
+                        {cat
+                          ? `${cat.icon ? `${cat.icon} ` : ""}${cat.name}`
+                          : ""}
                       </td>
                       <td className="py-1 pr-2">
                         {t.description || ""}
