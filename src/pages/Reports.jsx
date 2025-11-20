@@ -38,6 +38,25 @@ function formatDateForPdf(iso) {
   return `${d}/${m}/${y}`;
 }
 
+function formatStartLabel(dateStr) {
+  if (!dateStr) return "tutti";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "tutti";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}`;
+}
+
+function formatEndLabel(dateStr) {
+  if (!dateStr) return "tutti";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "tutti";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear()).slice(2); // ultimi 2 numeri
+  return `${day}-${month}-${year}`;
+}
+
 function resolveCategory(categories, catField) {
   if (!catField) return null;
   if (typeof catField === "object") {
@@ -53,7 +72,7 @@ function resolveCategory(categories, catField) {
   return null;
 }
 
-export default function Reports() {
+export default function Reports({ exportFormat = "pdf" }) {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
 
@@ -104,132 +123,165 @@ export default function Reports() {
     };
   }, [filtered]);
 
-  const handleDownloadPdf = () => {
+  const downloadCsv = (baseName) => {
+    const rows = [];
+    // intestazione
+    rows.push("Data;Tipo;Descrizione;Categoria;Importo");
+
+    filtered.forEach((t) => {
+      const cat = resolveCategory(categories, t.category);
+      const catName = cat?.name || "";
+      const isEntrata = safeNumber(t.amount) >= 0;
+      const tipo = isEntrata ? "Entrata" : "Uscita";
+      const row = [
+        formatDisplayDate(t.date),
+        tipo,
+        (t.description || "").replace(/;/g, ","),
+        (catName || "").replace(/;/g, ","),
+        formatEuro(t.amount),
+      ].join(";");
+      rows.push(row);
+    });
+
+    const csvContent = rows.join("\r\n");
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    // per Excel uso comunque CSV ma nome diverso
+    const ext =
+      exportFormat === "excel" ? "_excel.csv" : "_csv.csv";
+
+    link.setAttribute("download", `${baseName}${ext}`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = () => {
     if (!filtered.length) {
       alert("Nessuna transazione nel periodo selezionato.");
       return;
     }
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const rightX = pageWidth - 14;
+    const startLabel = formatStartLabel(fromDate);
+    const endLabel = formatEndLabel(toDate);
+    const baseName = `resoconto_${startLabel}_${endLabel}`;
 
-    // Titolo app
-    doc.setFontSize(18);
-    doc.text("Gestione Finanze", 14, 18);
+    if (exportFormat === "pdf") {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const rightX = pageWidth - 14;
 
-    // Sottotitolo: Resoconto finanziario dal ... al ...
-    const fromText = formatDateForPdf(fromDate);
-    const toText = formatDateForPdf(toDate);
-    let subtitle = "Resoconto finanziario";
-    if (fromText || toText) {
-      subtitle += " ";
-      if (fromText) {
-        subtitle += `dal ${fromText}`;
-      }
-      if (toText) {
-        subtitle += fromText ? ` al ${toText}` : `fino al ${toText}`;
-      }
-    }
-    doc.setFontSize(12);
-    doc.text(subtitle, 14, 26);
+      // Titolo app
+      doc.setFontSize(18);
+      doc.text("Gestione Finanze", 14, 18);
 
-    // tabella con le transazioni (Data, Tipo, Descrizione, Categoria, Importo)
-    const tableBody = filtered.map((t) => {
-      const cat = resolveCategory(categories, t.category);
-      const catName = cat?.name || "";
-      const isEntrata = safeNumber(t.amount) >= 0;
-      const tipo = isEntrata ? "Entrata" : "Uscita";
-      return [
-        formatDisplayDate(t.date),
-        tipo,
-        t.description || "",
-        catName,                // SOLO nome nel PDF
-        formatEuro(t.amount),
-      ];
-    });
-
-    autoTable(doc, {
-      startY: 34,
-      head: [["Data", "Tipo", "Descrizione", "Categoria", "Importo"]],
-      body: tableBody,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [33, 150, 243] },
-      columnStyles: {
-        4: { halign: "right" }, // colonna Importo allineata a destra
-      },
-      didParseCell: (data) => {
-        // colonna Importo (index 4): entrate verdi, uscite rosse
-        if (data.section === "body" && data.column.index === 4) {
-          const rawAmount = filtered[data.row.index]?.amount;
-          const isEntrata = safeNumber(rawAmount) >= 0;
-          data.cell.styles.textColor = isEntrata
-            ? [34, 197, 94] // verde
-            : [220, 38, 38]; // rosso
+      // Sottotitolo: Resoconto finanziario dal ... al ...
+      const fromText = formatDateForPdf(fromDate);
+      const toText = formatDateForPdf(toDate);
+      let subtitle = "Resoconto finanziario";
+      if (fromText || toText) {
+        subtitle += " ";
+        if (fromText) {
+          subtitle += `dal ${fromText}`;
         }
-      },
-    });
+        if (toText) {
+          subtitle += fromText ? ` al ${toText}` : `fino al ${toText}`;
+        }
+      }
+      doc.setFontSize(12);
+      doc.text(subtitle, 14, 26);
 
-    // Resoconto (Entrate / Uscite / Saldo) SOTTO la tabella, a destra
-    const lastY =
-      (doc.lastAutoTable && doc.lastAutoTable.finalY) || 34;
-    let y = lastY + 8;
+      // tabella con le transazioni (Data, Tipo, Descrizione, Categoria, Importo)
+      const tableBody = filtered.map((t) => {
+        const cat = resolveCategory(categories, t.category);
+        const catName = cat?.name || "";
+        const isEntrata = safeNumber(t.amount) >= 0;
+        const tipo = isEntrata ? "Entrata" : "Uscita";
+        return [
+          formatDisplayDate(t.date),
+          tipo,
+          t.description || "",
+          catName,
+          formatEuro(t.amount),
+        ];
+      });
 
-    doc.setFontSize(11);
+      autoTable(doc, {
+        startY: 34,
+        head: [["Data", "Tipo", "Descrizione", "Categoria", "Importo"]],
+        body: tableBody,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [33, 150, 243] },
+        columnStyles: {
+          4: { halign: "right" }, // colonna Importo allineata a destra
+        },
+        didParseCell: (data) => {
+          // colonna Importo (index 4): entrate verdi, uscite rosse
+          if (data.section === "body" && data.column.index === 4) {
+            const rawAmount = filtered[data.row.index]?.amount;
+            const isEntrata = safeNumber(rawAmount) >= 0;
+            data.cell.styles.textColor = isEntrata
+              ? [34, 197, 94] // verde
+              : [220, 38, 38]; // rosso
+          }
+        },
+      });
 
-    // Entrate in verde
-    doc.setTextColor(34, 197, 94);
-    doc.text(
-      `Entrate: ${formatEuro(summary.entrate)}`,
-      rightX,
-      y,
-      { align: "right" }
-    );
-    y += 6;
+      // Resoconto (Entrate / Uscite / Saldo) SOTTO la tabella, a destra
+      const lastY =
+        (doc.lastAutoTable && doc.lastAutoTable.finalY) || 34;
+      let y = lastY + 8;
 
-    // Uscite in rosso
-    doc.setTextColor(220, 38, 38);
-    doc.text(
-      `Uscite: ${formatEuro(summary.uscite)}`,
-      rightX,
-      y,
-      { align: "right" }
-    );
-    y += 6;
+      doc.setFontSize(11);
 
-    // Saldo in nero
-    doc.setTextColor(0, 0, 0);
-    doc.text(
-      `Saldo: ${formatEuro(summary.saldo)}`,
-      rightX,
-      y,
-      { align: "right" }
-    );
+      // Entrate in verde
+      doc.setTextColor(34, 197, 94);
+      doc.text(
+        `Entrate: ${formatEuro(summary.entrate)}`,
+        rightX,
+        y,
+        { align: "right" }
+      );
+      y += 6;
 
-// --- FORMATTAZIONE DATE PER IL NOME FILE ---
-function formatStartLabel(dateStr) {
-  if (!dateStr) return "tutti";
-  const d = new Date(dateStr);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  return `${day}-${month}`;
-}
+      // Uscite in rosso
+      doc.setTextColor(220, 38, 38);
+      doc.text(
+        `Uscite: ${formatEuro(summary.uscite)}`,
+        rightX,
+        y,
+        { align: "right" }
+      );
+      y += 6;
 
-function formatEndLabel(dateStr) {
-  if (!dateStr) return "tutti";
-  const d = new Date(dateStr);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = String(d.getFullYear()).slice(2); // ultimi 2 numeri
-  return `${day}-${month}-${year}`;
-}
+      // Saldo in nero
+      doc.setTextColor(0, 0, 0);
+      doc.text(
+        `Saldo: ${formatEuro(summary.saldo)}`,
+        rightX,
+        y,
+        { align: "right" }
+      );
 
-const startLabel = formatStartLabel(fromDate);
-const endLabel = formatEndLabel(toDate);
-
-const filename = `resoconto_${startLabel}_${endLabel}.pdf`;
-doc.save(filename);
+      doc.save(`${baseName}.pdf`);
+    } else {
+      // CSV o Excel (CSV apribile con Excel)
+      downloadCsv(baseName);
+    }
   };
+
+  const exportLabel =
+    exportFormat === "pdf"
+      ? "PDF"
+      : exportFormat === "csv"
+      ? "CSV"
+      : "Excel";
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
@@ -256,10 +308,10 @@ doc.save(filename);
               onChange={(e) => setToDate(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-1">
             <button
               type="button"
-              className="flex-1 px-3 py-2 border rounded text-sm"
+              className="px-3 py-2 border rounded text-sm"
               onClick={() => {
                 setFromDate("");
                 setToDate("");
@@ -269,10 +321,10 @@ doc.save(filename);
             </button>
             <button
               type="button"
-              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm"
-              onClick={handleDownloadPdf}
+              className="px-3 py-2 bg-blue-600 text-white rounded text-sm"
+              onClick={handleDownload}
             >
-              Scarica PDF
+              Scarica ({exportLabel})
             </button>
           </div>
         </div>
